@@ -280,5 +280,31 @@ ggplot(plot.correlation, aes(name, correlation)) +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank())
 
+
 ggsave("./figs/model_correlation.png", width = 7, height = 5, units = 'in')
 
+
+# select the models with lowest bias and plot against ERSST observations
+plot.bias
+
+use <- as.vector(plot.bias$name[plot.bias$bias < 0.5])
+
+best.model.hist <- historical.runs[, use]
+
+best.model.hist$year <- 1950:2014
+
+best.model.hist <-best.model.hist %>%
+  pivot_longer(cols = -year)
+
+plot.ersst <- data.frame(year = 1950:2014,
+                         ersst = ersst) %>%
+  pivot_longer(cols = -year)
+
+ggplot(best.model.hist, aes(year, value, color = name)) +
+  geom_line() +
+  geom_line(data = plot.ersst, aes(year, value, color = name), color = "black", lwd = 1) +
+  ggtitle("ERSST observations in black") +
+  ylab("SST (°C)") +
+  theme(axis.title.x = element_blank())
+
+ggsave("./figs/ersst_vs_low_bias_models.png", width = 7, height = 5, units = 'in')
