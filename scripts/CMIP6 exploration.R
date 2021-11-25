@@ -84,7 +84,7 @@ for(i in 1:length(files)){
   dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
 
 
-  drop <- lon > 210 | lon < 202 | lat < 55 | lat > 59
+  drop <- lon > 224 | lon < 202 | lat < 55 | lat > 60
   SST[,drop] <- NA
   
   drop <- lon == 202.5 & lat == 58.5
@@ -93,7 +93,7 @@ for(i in 1:length(files)){
   # and plot 
   # SST.mean <- colMeans(SST)
   # z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
-  # image(x,y,z, col=new.col, ylim = c(53, 60), xlim = c(200, 212))
+  # image(x,y,z, col=new.col, ylim = c(53, 64), xlim = c(194, 228))
   # contour(x, y, z, add=T, col="white")
   # map('world2Hires',fill=F,add=T, lwd=2)
 
