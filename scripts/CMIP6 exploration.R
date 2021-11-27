@@ -91,12 +91,17 @@ for(i in 1:length(files)){
   SST[,drop] <- NA
   
   # and plot 
-  # SST.mean <- colMeans(SST)
-  # z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
-  # image(x,y,z, col=new.col, ylim = c(53, 64), xlim = c(194, 228))
-  # contour(x, y, z, add=T, col="white")
-  # map('world2Hires',fill=F,add=T, lwd=2)
+# 
+#   png("./figs/CMIP6_spatial_domain.png", 6, 4.5, units = "in", res = 300)
+#   SST.mean <- colMeans(SST)
+#   z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+#   image(x,y,z, col=new.col, ylim = c(40, 64), xlim = c(140, 240))
+#   contour(x, y, z, add=T, col="white")
+#   map('world2Hires',fill=F,add=T, lwd=2)
+#   
+#   dev.off()
 
+  
   # get average temperature
   these.temps <- data.frame(this.name = rowMeans(SST, na.rm = T))
   
