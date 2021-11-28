@@ -282,7 +282,7 @@ theme_set(theme_bw())
 ggplot(plot.bias, aes(name, bias)) +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
-  labs(title = "Bias, 1900-2014", y = "Absolute value of bias (°C)")
+  labs(title = "Bias, 1900-2020", y = "Absolute value of bias (°C)")
 
 ggsave("./figs/model_bias.png", width = 7, height = 5, units = 'in')
 
@@ -303,11 +303,12 @@ plot.correlation <- plot.correlation[-drop,]
 plot.correlation$name <- str_remove(plot.correlation$name, ".nc")
 plot.correlation$name <- reorder(plot.correlation$name, plot.correlation$correlation)
 
+arrange(plot.correlation, desc(correlation))
 
 ggplot(plot.correlation, aes(name, correlation)) +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
-  ggtitle("Correlation for 10-yr running mean SST, 1900-2014")
+  ggtitle("Correlation for 10-yr running mean SST, 1900-2020")
 
 
 ggsave("./figs/model_correlation.png", width = 7, height = 5, units = 'in')
@@ -320,9 +321,11 @@ ggplot(bias.corr, aes(bias, correlation, label = name)) +
 
 ggsave("./figs/model_bias_vs_correlation.png", width = 8, height = 6, units = 'in')
 
-# select the models with highest low-frequency correlation
-# (r > 0.5), bias-correct, and plot against ERSST observations
-use <- as.vector(plot.correlation$name[plot.correlation$correlation > 0.5])
+# suggests a cluster of high correlation, low bias models
+# use this group, identify based on correlation
+# (r > 0.45), bias-correct, and plot against ERSST observations
+
+use <- as.vector(plot.correlation$name[plot.correlation$correlation > 0.45])
 
 # subset historical smooths with only the "use" models
 keep <- names(historical.smoothed) %in% use
@@ -350,42 +353,25 @@ ff <- function(x) as.vector(scale(x))
 best.model.smoothed.anomaly <- apply(best.model.smoothed, 2, ff)
 
 best.model.smoothed.anomaly <- as.data.frame(best.model.smoothed.anomaly) %>% 
-  mutate(year = 1900:2014) %>%
+  mutate(year = 1900:2020) %>%
   pivot_longer(cols = -year, values_to = "anomaly") %>%
   rename(model = name)
 
-ersst.smoothed.anomaly <- data.frame(year = 1900:2014,
+ersst.smoothed.anomaly <- data.frame(year = 1900:2020,
                                      anomaly = as.vector(scale(ersst.smoothed)))
 
 
 ggplot(best.model.smoothed.anomaly, aes(year, anomaly, color = model)) +
   geom_line() +
   geom_line(data = ersst.smoothed.anomaly, aes(year, anomaly, color = model), color = "black", lwd = 1) +
-  ggtitle("10-yr running mean SST (ERSST observations in black)") +
+  ggtitle("10-yr running mean SST 1900-2020 (ERSST observations in black)") +
   ylab("SST (anomaly)") +
-  theme(axis.title.x = element_blank())
+  theme(axis.title.x = element_blank()) +
+  geom_hline(yintercept = 0, color = "dark grey")
 
-                                     
-best.model.hist$year <- 1950:2014
 
-best.model.hist <-best.model.hist %>%
-  pivot_longer(cols = -year)
+ggsave("./figs/ersst_vs_best_bias_models_smoothed.png", width = 8, height = 5, units = 'in')
 
-plot.ersst <- data.frame(year = 1950:2014,
-                         ersst = ersst) %>%
-  pivot_longer(cols = -year)
-
-ggplot(best.model.hist, aes(year, value, color = name)) +
-  geom_line() +
-  geom_line(data = plot.ersst, aes(year, value, color = name), color = "black", lwd = 1) +
-  ggtitle("ERSST observations in black") +
-  ylab("SST anomaly") +
-  theme(axis.title.x = element_blank())
-
-ggsave("./figs/ersst_vs_low_bias_models.png", width = 8, height = 5, units = 'in')
-
-# and plot as anomalies
-best.model.hist.anom <- plyr::ddply(best.model.hist, "name", function (x) value <- scale(x$value))
 
 
 
