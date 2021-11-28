@@ -373,5 +373,61 @@ ggplot(best.model.smoothed.anomaly, aes(year, anomaly, color = model)) +
 ggsave("./figs/ersst_vs_best_bias_models_smoothed.png", width = 8, height = 5, units = 'in')
 
 
+# now plot annual (non-smoothed) anomalies and also compare AR(1) values with observations
+
+# clean up names from annual runs
+names(historical.runs) <- str_remove(names(historical.runs), ".nc")
+
+best.model.annual <- historical.runs[names(historical.runs) %in% use] 
+
+# calculate anomalies
+best.model.annual.anomaly <- as.data.frame(apply(best.model.annual, 2, ff)) %>%
+  mutate(year = 1900:2020) %>%
+  pivot_longer(cols = -year, values_to = "anomaly") %>%
+  rename(model = name)
+
+ersst.annual.anomaly <- data.frame(year = 1900:2020,
+                                   anomaly = as.vector(scale(ersst)))
 
 
+ggplot(best.model.annual.anomaly, aes(year, anomaly, color = model)) +
+  geom_line() +
+  geom_line(data = ersst.annual.anomaly, aes(year, anomaly, color = model), color = "black", lwd = 1) +
+  ggtitle("Annual SST 1900-2020 (ERSST observations in black)") +
+  ylab("SST (anomaly)") +
+  theme(axis.title.x = element_blank()) +
+  geom_hline(yintercept = 0, color = "dark grey")
+
+ggsave("./figs/ersst_vs_best_bias_models_annual.png", width = 8, height = 5, units = 'in')
+
+# now calculate AR(1) and plot
+
+best.model.annual.anomaly <- best.model.annual.anomaly %>%
+  pivot_wider(names_from = model, values_from = anomaly)
+
+ar.comparison <- left_join(ersst.annual.anomaly, best.model.annual.anomaly) 
+
+names(ar.comparison)[2] <- "ERSSTv5"
+
+ar.out <- data.frame()
+
+for(i in 2:ncol(ar.comparison)) {
+  
+  mod <- ar(ar.comparison[,i], aic = F, order.max = 1)
+  
+  temp <- data.frame(name = names(ar.comparison)[i],
+                     ar = mod$ar)
+  
+  ar.out <- rbind(ar.out, temp)
+  
+}
+
+ar.out$name <- reorder(ar.out$name, ar.out$ar)
+
+ggplot(ar.out, aes(name, ar)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
+  ggtitle("SST autocorrelation, 1900-2020") +
+  ylab("First-order autocorrelation")
+  
+ggsave("./figs/time_series_autocorrelation.png", width = 6, height = 4, units = 'in')
