@@ -84,22 +84,33 @@ for(i in 1:length(files)){
   dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
 
 
-  drop <- lon > 224 | lon < 202 | lat < 55 | lat > 60
+  drop <- lon < 198 | lat < 55 
   SST[,drop] <- NA
   
-  drop <- lon == 202.5 & lat == 58.5
+  drop <- lon == 198.5 & lat > 56
   SST[,drop] <- NA
   
+  drop <- lon == 199.5 & lat > 56
+  SST[,drop] <- NA
+  
+  drop <- lon == 200.5 & lat > 56
+  SST[,drop] <- NA
+
+  drop <- lon == 201.5 & lat > 57
+  SST[,drop] <- NA  
+  
+  drop <- lon == 202.5 & lat > 58
+  SST[,drop] <- NA  
   # and plot 
 # 
-#   png("./figs/CMIP6_spatial_domain.png", 6, 4.5, units = "in", res = 300)
-#   SST.mean <- colMeans(SST)
-#   z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
-#   image(x,y,z, col=new.col, ylim = c(40, 64), xlim = c(140, 240))
-#   contour(x, y, z, add=T, col="white")
-#   map('world2Hires',fill=F,add=T, lwd=2)
-#   
-#   dev.off()
+  # png("./figs/CMIP6_spatial_domain.png", 6, 4.5, units = "in", res = 300)
+  # SST.mean <- colMeans(SST)
+  # z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+  # image(x,y,z, col=new.col, ylim = c(40, 64), xlim = c(140, 240))
+  # contour(x, y, z, add=T, col="white")
+  # map('world2Hires',fill=F,add=T, lwd=2)
+  # 
+  # dev.off()
 
   
   # get average temperature
@@ -115,15 +126,15 @@ View(dates)
 
 # just checked visually, but yes, they appear to be!
 
-# load ERSST for comparison - 1950 through 2014
+# load ERSST for comparison - 1900 through 2014
 
-# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1950-01-01):1:(2014-12-01T00:00:00Z)][(0.0):1:(0.0)][(54):1:(62)][(200):1:(226)]", "~temp")
+# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-12-01T00:00:00Z)][(0.0):1:(0.0)][(52):1:(62)][(198):1:(226)]", "~temp")
 
 
 # load and process SST data
 # nc <- nc_open("~temp")
 
-nc <- nc_open("./data/nceiErsstv5_c83f_8d23_4777.nc")
+nc <- nc_open("./data/nceiErsstv5_bf33_3a9d_7ad9.nc")
 
 # process
 
@@ -157,25 +168,26 @@ SST[,BB] <- NA
 # and check
 temp.mean <- colMeans(SST, na.rm=T)
 z <- t(matrix(temp.mean,length(y)))  
-image.plot(x,y,z, col=oceColorsPalette(64), xlim=c(195,230), ylim=c(53,62))
+image.plot(x,y,z, col=oceColorsPalette(64), xlim=c(180,240), ylim=c(40,62))
 contour(x, y, z, add=T)  
 map('world2Hires',c('Canada', 'usa'), fill=T,xlim=c(130,250), ylim=c(20,66),add=T, lwd=1, col="lightyellow3")
 
-# WGOA for cod/pollock paper
+# trim spatial area
 
-drop <- lon > 210 | lon < 202 | lat < 55 | lat > 59
-wSST <- SST
-wSST[,drop] <- NA
+drop <-  lat < 56 
+SST[,drop] <- NA
 
+drop <-  lat > 55 & lon == 198
+SST[,drop] <- NA
 
 # and check
-temp.mean <- colMeans(wSST, na.rm=T)
+temp.mean <- colMeans(SST, na.rm=T)
 z <- t(matrix(temp.mean,length(y)))  
-image.plot(x,y,z, col=oceColorsPalette(64), xlim=c(195,230), ylim=c(53,62))
+image.plot(x,y,z, col=oceColorsPalette(64), xlim=c(195,230), ylim=c(52,62))
 map('world2Hires',c('Canada', 'usa'), fill=T,xlim=c(130,250), ylim=c(20,66),add=T, lwd=1, col="lightyellow3")
 
 # calculate monthly mean
-obs.sst <- rowMeans(wSST, na.rm = T)
+obs.sst <- rowMeans(SST, na.rm = T)
 
 # and annual observed means
 ann.sst <- tapply(obs.sst, as.numeric(as.character(yr)), mean)
@@ -251,15 +263,17 @@ historical.runs <- compare.sst[,2:ncol(compare.sst)]
 
 bias <- colMeans(historical.runs) - mean(ersst)
 
-correlation <- cor(historical.runs, ersst)
 
 plot.bias <- data.frame(name = names(bias),
                         bias = abs(bias)) 
 
-# drop _245; these are repeats I assume with different scenarios
+# drop _245; these are repeats with different scenarios
 
 drop <- grep("_245", plot.bias$name)
 plot.bias <- plot.bias[-drop,]
+
+# clean up model names
+plot.bias$name <- str_remove(plot.bias$name, ".nc")
 
 plot.bias$name <- reorder(plot.bias$name, plot.bias$bias)
 
@@ -267,10 +281,18 @@ theme_set(theme_bw())
 
 ggplot(plot.bias, aes(name, bias)) +
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank())
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
+  labs(title = "Bias, 1900-2014", y = "Absolute value of bias (°C)")
 
 ggsave("./figs/model_bias.png", width = 7, height = 5, units = 'in')
 
+# calculate correlation for low-frequency variability (smoothed with 10-yr running means)
+ff <- function(x) zoo::rollmean(x, 10, fill = NA)
+
+historical.smoothed <- apply(historical.runs, 2, ff)
+ersst.smoothed <- zoo::rollmean(ersst, 10, fill = NA)
+
+correlation <- cor(historical.smoothed, ersst.smoothed, use = "p")
 
 plot.correlation <- data.frame(name = rownames(correlation),
                         correlation = correlation) 
@@ -278,24 +300,72 @@ plot.correlation <- data.frame(name = rownames(correlation),
 drop <- grep("_245", plot.correlation$name)
 plot.correlation <- plot.correlation[-drop,]
 
+plot.correlation$name <- str_remove(plot.correlation$name, ".nc")
 plot.correlation$name <- reorder(plot.correlation$name, plot.correlation$correlation)
 
 
 ggplot(plot.correlation, aes(name, correlation)) +
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank())
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
+  ggtitle("Correlation for 10-yr running mean SST, 1900-2014")
 
 
 ggsave("./figs/model_correlation.png", width = 7, height = 5, units = 'in')
 
+# combine a plot of bias and correlation
+bias.corr <- left_join(plot.bias, plot.correlation)
 
-# select the models with lowest bias and plot against ERSST observations
-plot.bias
+ggplot(bias.corr, aes(bias, correlation, label = name)) +
+  geom_text() 
 
-use <- as.vector(plot.bias$name[plot.bias$bias < 0.5])
+ggsave("./figs/model_bias_vs_correlation.png", width = 8, height = 6, units = 'in')
 
-best.model.hist <- historical.runs[, use]
+# select the models with highest low-frequency correlation
+# (r > 0.5), bias-correct, and plot against ERSST observations
+use <- as.vector(plot.correlation$name[plot.correlation$correlation > 0.5])
 
+# subset historical smooths with only the "use" models
+keep <- names(historical.smoothed) %in% use
+
+best.model.smoothed <- as.data.frame(historical.smoothed)
+
+names(best.model.smoothed) <- str_remove(names(best.model.smoothed), ".nc")
+
+best.model.smoothed <- best.model.smoothed %>%
+  select(use)
+
+# subset bias with only the "use" Models
+names(bias) <- str_remove(names(bias), ".nc")
+
+best.model.bias <- bias[names(bias) %in% use]
+
+# # check that names line up
+# identical(names(best.model.bias), names(best.model.smoothed)) # yes!
+# 
+# # bias-correct smoothed time series for best models
+# best.model.smoothed.bias.corrected <- best.model.smoothed - best.model.bias
+
+ff <- function(x) as.vector(scale(x))
+
+best.model.smoothed.anomaly <- apply(best.model.smoothed, 2, ff)
+
+best.model.smoothed.anomaly <- as.data.frame(best.model.smoothed.anomaly) %>% 
+  mutate(year = 1900:2014) %>%
+  pivot_longer(cols = -year, values_to = "anomaly") %>%
+  rename(model = name)
+
+ersst.smoothed.anomaly <- data.frame(year = 1900:2014,
+                                     anomaly = as.vector(scale(ersst.smoothed)))
+
+
+ggplot(best.model.smoothed.anomaly, aes(year, anomaly, color = model)) +
+  geom_line() +
+  geom_line(data = ersst.smoothed.anomaly, aes(year, anomaly, color = model), color = "black", lwd = 1) +
+  ggtitle("10-yr running mean SST (ERSST observations in black)") +
+  ylab("SST (anomaly)") +
+  theme(axis.title.x = element_blank())
+
+                                     
 best.model.hist$year <- 1950:2014
 
 best.model.hist <-best.model.hist %>%
@@ -309,7 +379,13 @@ ggplot(best.model.hist, aes(year, value, color = name)) +
   geom_line() +
   geom_line(data = plot.ersst, aes(year, value, color = name), color = "black", lwd = 1) +
   ggtitle("ERSST observations in black") +
-  ylab("SST (°C)") +
+  ylab("SST anomaly") +
   theme(axis.title.x = element_blank())
 
-ggsave("./figs/ersst_vs_low_bias_models.png", width = 7, height = 5, units = 'in')
+ggsave("./figs/ersst_vs_low_bias_models.png", width = 8, height = 5, units = 'in')
+
+# and plot as anomalies
+best.model.hist.anom <- plyr::ddply(best.model.hist, "name", function (x) value <- scale(x$value))
+
+
+
