@@ -16,6 +16,7 @@ new.col <- oceColorsPalette(64)
 # set theme
 theme_set(theme_bw())
 
+## process model outputs ---------------------
 
 # get list of file names
 files <- list.files("./model_outputs/")
@@ -126,7 +127,10 @@ View(dates)
 
 # just checked visually, but yes, they appear to be!
 
-# load ERSST for comparison - 1900 through 2014
+
+## load and process ERSSTv5 observations ----------------------------------
+
+# load ERSST for comparison - 1900 through 2020
 
 # download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-12-01T00:00:00Z)][(0.0):1:(0.0)][(52):1:(62)][(198):1:(226)]", "~temp")
 
@@ -191,6 +195,9 @@ obs.sst <- rowMeans(SST, na.rm = T)
 
 # and annual observed means
 ann.sst <- tapply(obs.sst, as.numeric(as.character(yr)), mean)
+
+
+## model evaluation --------------------------------------------
 
 # combine observations and historical simulations in one df
 compare.sst <- data.frame(year = as.numeric(names(ann.sst)),
@@ -431,3 +438,42 @@ ggplot(ar.out, aes(name, ar)) +
   ylab("First-order autocorrelation")
   
 ggsave("./figs/time_series_autocorrelation.png", width = 6, height = 4, units = 'in')
+
+
+## now plot full time series for selected models under both SSPs, along with observations
+
+# identify the models listed in "use"; subset these out of the temps matrix using experiment.file
+
+keep <- vector()
+
+for(i in 1:length(use)){
+  
+  temp <- grep(use[i], experiment.file$file)
+  keep <- c(keep, temp)
+  
+}
+
+use.file <- experiment.file[keep,]
+
+use.temps <- temps[, keep]
+
+# plot annual values under ssp.585, ssp.245, pi.control
+
+# select correct model runs
+use.585 <- grep("585", use.file$experiment)
+use.245 <- grep("245", use.file$experiment)
+use.control <- grep("Control", use.file$experiment)
+
+# get annual means for temps we're going to use
+years <- as.numeric(as.character(years(d)))
+
+ff <- function(x) tapply(x, years, mean)
+
+temps.annual <- apply(temps, 2, ff)
+
+temps.585 <- as.data.frame(temps.annual[,use.585])
+name
+
+temps.245 <- temps.annual[,use.245]
+temps.control <- temps.annual[,use.control]
+
