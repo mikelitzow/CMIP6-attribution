@@ -116,6 +116,7 @@ for(i in 1:length(files)){
   
   # get average temperature
   these.temps <- data.frame(this.name = rowMeans(SST, na.rm = T))
+  names(these.temps) <- this.name
   
   temps <- cbind(temps, these.temps)
   
@@ -443,6 +444,9 @@ ggsave("./figs/time_series_autocorrelation.png", width = 6, height = 4, units = 
 ## now plot full time series for selected models under both SSPs, along with observations
 
 # identify the models listed in "use"; subset these out of the temps matrix using experiment.file
+# clean up file names
+experiment.file$file <- str_remove(experiment.file$file, ".nc")
+experiment.file$file <- str_remove(experiment.file$file, "_245")
 
 keep <- vector()
 
@@ -459,21 +463,179 @@ use.temps <- temps[, keep]
 
 # plot annual values under ssp.585, ssp.245, pi.control
 
-# select correct model runs
-use.585 <- grep("585", use.file$experiment)
-use.245 <- grep("245", use.file$experiment)
-use.control <- grep("Control", use.file$experiment)
+# trying this again, more deliberately!
 
 # get annual means for temps we're going to use
 years <- as.numeric(as.character(years(d)))
 
 ff <- function(x) tapply(x, years, mean)
 
-temps.annual <- apply(temps, 2, ff)
+temps.annual <- as.data.frame(apply(temps, 2, ff))
 
-temps.585 <- as.data.frame(temps.annual[,use.585])
-name
+# pick out models one at a time and plot
 
-temps.245 <- temps.annual[,use.245]
-temps.control <- temps.annual[,use.control]
+use.models <- unique(use.file$file)
+model.output <- data.frame()
 
+for(i in 1:length(use.models)){
+  
+# i <- 7
+
+pick.mod <- grep(use.models[i], names(temps.annual)) 
+
+pick.temps <- temps.annual[,pick.mod]
+
+# change from Kelvin if need be
+if(mean(pick.temps[,1]) > 200) {pick.temps <- pick.temps-273.15}
+
+names(pick.temps) <- experiment.file$experiment[pick.mod]
+
+plot.pick <- pick.temps %>%
+  mutate(year = 1900:2099) %>%
+  pivot_longer(cols = -year)
+
+ggplot(plot.pick, aes(year, value, color = name)) +
+  geom_line()
+
+# convert to anomaly relative to 20th century climatology
+# for(j in 1:ncol(pick.temps)){
+#   
+#   j <- 1
+#   for(ii in 1:nrow(pick.temps)){
+#   pick.temps[ii,j] <- (pick.temps[ii,j] - mean(pick.temps[1:100,j])) / sd(pick.temps[1:100,j])
+#   
+# }}
+
+
+mean.pick <- colMeans(pick.temps[1:100,])
+mean.pick <- matrix(mean.pick, nrow = length(1900:2099), ncol = 3, byrow = T)
+
+pick.temps <- pick.temps - mean.pick
+
+
+sd.pick <- apply(pick.temps[1:100,], 2, sd)
+sd.pick <- matrix(sd.pick, nrow = length(1900:2099), ncol = 3, byrow = T)
+
+pick.temps <- pick.temps / sd.pick
+
+plot.pick <- pick.temps %>%
+  mutate(year = 1900:2099) %>%
+  pivot_longer(cols = -year)
+
+ggplot(plot.pick, aes(year, value, color = name)) +
+  geom_line() +
+  ggtitle(use.models[i])
+
+pick.temps$year <- 1900:2099
+pick.temps$model <- use.models[i]
+
+pick.temps <- pick.temps %>%
+  pivot_longer(cols = c(-year, -model))
+
+model.output <- rbind(model.output, pick.temps)
+
+}
+
+ggplot(model.output, aes(year, value, color = name)) +
+  geom_line() +
+  facet_wrap(~model)
+
+ggplot(model.output, aes(year, value, color = model)) +
+  geom_line() +
+  facet_wrap(~name)
+
+# limit to 585 and control
+plot.model <- model.output %>%
+  filter(name != "hist_ssp245") %>%
+  rename(anomaly = value)
+
+
+# calculate model mean for each experiment
+mod.mean <- plot.model %>%
+  group_by(year, name) %>% 
+  summarise(model.mean = mean(anomaly)) 
+
+# and get ersst anomaly wrt 20th century
+
+ersst.plot <- data.frame(year = 1900:2020,
+                         anomaly = (ersst - mean(ersst[1:100])) / sd(ersst[1:100]))
+
+ggplot(plot.model, aes(year, anomaly, color = model)) +
+  geom_line() +
+  facet_wrap(~name, ncol = 1) +
+  geom_line(data = mod.mean, aes(year, model.mean), color = "black", lwd = 1) +
+  geom_line(data = ersst.plot, aes(year, anomaly), color = "red", lwd = 1) +
+  labs(y = "SST anomaly", title = "ERSST in red, multi-model mean in black") +
+  theme(axis.title.x = element_blank()) +
+  scale_x_continuous(breaks = seq(1900, 2100, 20)) +
+  coord_cartesian(xlim = c(1900, 2100))
+
+ggsave("./figs/ssp585_picontrol_anomaly_time_series.png", width = 9, height = 7, units = 'in')
+
+
+## calculate FAR -----------------------
+
+# use 1981-2000, 2001-2020, and 2021-2040 as the periods for calculating present-day probability
+
+# separate preindustrial runs; use the entire time series for preindustrial probability calculations
+
+preindustrial <- plot.model %>%
+  filter(name == "piControl")
+
+
+hist.1981.2020 <- plot.model %>%
+  filter(name == "hist_ssp585", year %in% 1981:2020)
+
+
+far.plot <- ersst.plot %>%
+  filter(year >= 1981) %>%
+  mutate(obs.FAR = NA)
+
+for(i in 1:nrow(far.plot)){
+ 
+  temp <- far.plot$anomaly[i]
+  far.plot$obs.FAR[i] <- 1 - ((sum(preindustrial$anomaly >= temp) / length(preindustrial$anomaly)) /
+    (sum(hist.1981.2020$anomaly >= temp) / length(hist.1981.2020$anomaly)))
+  
+}
+
+
+ggplot(far.plot, aes(year, obs.FAR)) +
+  geom_line()
+
+# now FAR for mean model projections 2015 - 2040
+mean.proj.2015.2040 <- plot.model %>%
+  filter(name == "hist_ssp585", year %in% 2015:2040) %>%
+  group_by(year) %>%
+  summarise(anomaly = mean(anomaly)) %>%
+  mutate(proj.FAR = NA)
+
+proj.2015.2040 <- plot.model %>%
+  filter(name == "hist_ssp585", year %in% 2015:2040)
+
+
+
+for(i in 2015:2040){
+  # i <- 2015
+  temp <- mean.proj.2015.2040$anomaly[mean.proj.2015.2040$year == i]
+  mean.proj.2015.2040$proj.FAR[mean.proj.2015.2040$year == i] <- 1 - ((sum(preindustrial$anomaly >= temp) / length(preindustrial$anomaly)) /
+                                (sum(hist.1981.2020$anomaly >= temp) / length(hist.1981.2020$anomaly)))
+  
+}
+
+plot <- data.frame(year = 1981:2040,
+                   observed = c(far.plot$obs.FAR, rep(NA, length(2021:2040))),
+                   mean.projected = c(rep(NA, length(1981:2014)), mean.proj.2015.2040$proj.FAR)) %>%
+  pivot_longer(cols = -year, values_to = "FAR")
+
+
+ggplot(plot, aes(year, FAR, color = name)) +
+  geom_line() +
+  scale_color_manual(values = c("red", "black"))
+
+ggsave("./figs/observed_and_mean_projected_FAR.png", width = 6, height = 3, units = 'in')
+
+
+# next steps: fite Bayesian models to both observed (1981-2020) and hist/projected (1981-2040) TS
+# fit each model separately (historical and preindustrial probability from only that model for both obs and hist/proj)
+# then fit brms model with year as a factor and model ID as a group-level term; plot 90% CI
