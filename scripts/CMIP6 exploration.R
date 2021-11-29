@@ -575,7 +575,7 @@ ggsave("./figs/ssp585_picontrol_anomaly_time_series.png", width = 9, height = 7,
 
 ## calculate FAR -----------------------
 
-# use 1981-2000, 2001-2020, and 2021-2040 as the periods for calculating present-day probability
+# use 1981-2020 for calculating present-day probability (period with data for fishery)
 
 # separate preindustrial runs; use the entire time series for preindustrial probability calculations
 
