@@ -21,6 +21,14 @@ theme_set(theme_bw())
 # get list of file names
 files <- list.files("./model_outputs/")
 
+# save as a table for write-up
+drop <- grep("245", files)
+
+file.table <- files[-drop] %>%
+  str_remove(".nc")
+
+write.csv(file.table, "./figs/file.table.csv")
+
 # loop through each file, save the file name and experiment,
 # capture the time series of raw temps for area of interest for each file-experiment comparison
 
@@ -314,9 +322,7 @@ plot.correlation$name <- reorder(plot.correlation$name, plot.correlation$correla
 arrange(plot.correlation, desc(correlation))
 
 ggplot(plot.correlation, aes(name, correlation)) +
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
-  ggtitle("Correlation for 10-yr running mean SST, 1900-2020")
+  geom_bar(stat = "identity") +P
 
 
 ggsave("./figs/model_correlation.png", width = 7, height = 5, units = 'in')
@@ -379,6 +385,237 @@ ggplot(best.model.smoothed.anomaly, aes(year, anomaly, color = model)) +
 
 
 ggsave("./figs/ersst_vs_best_bias_models_smoothed.png", width = 8, height = 5, units = 'in')
+
+# based on TCR constraint idea - compare warming trend during 1981-2014 for ERSST and best models
+
+# remove ssp 245
+drop <- grep("_245", names(historical.runs))
+historical.585 <- historical.runs[,-drop]
+
+historical.585.use <- historical.585 %>%
+  select(use) %>%
+  mutate(year = 1900:2020, ersst = ersst) %>%
+  filter(year %in% 1980:2014) %>%
+  select(-year)
+
+yrs <- 1980:2014
+
+ff <- function(x) summary(lm(x ~ yrs))$coef[2,1]*10
+
+coefs <- data.frame(name = names(historical.585.use),
+                    warming.rate = apply(historical.585.use, 2, ff)) 
+
+coefs$name <- reorder(coefs$name, coefs$warming.rate)
+
+ggplot(coefs, aes(name, warming.rate)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
+  ggtitle("GOA warming rate, 1981-2014") +
+  ylab("Warming rate (°C / decade)")
+
+ggsave("./figs/model_warming_rate_GOA_1981-2014.png", width = 7, height = 5, units = 'in')
+
+
+## evaluate NE Pacific-wide warming rate for the same models -------------------
+
+# start from the beginning - get list of file names
+files <- list.files("./model_outputs/")
+
+# loop through each file, save the file name and experiment,
+# capture the time series of raw temps for area of interest for each file-experiment comparison
+
+
+files.use <- vector()
+
+use
+
+for(i in 1:length(use)){
+  
+  # i <- 1
+  pick <- grep(use[i], files)
+  
+  files.use <- c(files.use, files[pick])
+  
+}
+
+# and remove ssp 245
+
+drop <- grep("245", files.use)
+
+files.use <- files.use[-drop]
+
+
+# objects for saving dates and temps and file-experiment ID from each realization
+ne.pac.temps  <- matrix()
+ne.pac.experiment <- data.frame()
+
+for(i in 1:length(files.use)){
+  
+  # i <- 1
+  
+  path <- paste("./model_outputs/", files.use[i], sep="")
+  
+  # load file
+  nc <- nc_open(path)
+  
+  # nc
+  
+  # extract one experiment at a time and save with file name
+  
+  # get list of experiments
+  # experiments <-  ncvar_get(nc, "experiment", verbose = F)
+  
+  for(j in 1:length(experiments)){
+    
+    # j <- 2
+    if(ncvar_get(nc, "experiment", start = j, count = 1) == "hist_ssp585"){
+      
+    temp <- data.frame(model = use[i],
+                       experiment = ncvar_get(nc, "experiment", start = j, count = 1))
+    
+    ne.pac.experiment <- rbind(temp,
+                               ne.pac.experiment)
+    
+    # extract dates
+    
+    d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
+    
+    # extract spatial area
+    # 20-68 deg. N, 120-250 deg. E
+    x <- ncvar_get(nc, "lon")
+    y <- ncvar_get(nc, "lat")
+    
+    
+    SST <- ncvar_get(nc, "tos", verbose = F, start = c(j,1,1,1), count = c(1,-1,-1,-1))
+    
+    
+    # Change data from a 3-D array to a matrix of monthly data by grid point:
+    # First, reverse order of dimensions ("transpose" array)
+    SST <- aperm(SST, 3:1)
+    
+    # Change to matrix with column for each grid point, rows for monthly means
+    SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
+    
+    # Keep track of corresponding latitudes and longitudes of each column:
+    lat <- rep(y, length(x))   
+    lon <- rep(x, each = length(y))   
+    dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
+    
+
+    these.temps <- data.frame(this.name = rowMeans(SST, na.rm = T))
+
+    ne.pac.temps <- cbind(ne.pac.temps, these.temps)
+    
+    } # close if 
+    
+  } # close j
+} # close i
+
+ne.pac.temps <- ne.pac.temps[,-1]
+
+names(ne.pac.temps) <- files.use
+
+# get annual means
+ff <- function(x) tapply(x, as.numeric(as.character(years((d)))), mean)
+
+ne.pac.annual <- apply(ne.pac.temps, 2, ff)
+
+# and ersst for the same area
+
+# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-12-01T00:00:00Z)][(0.0):1:(0.0)][(10):1:(62)][(180):1:(260)]", "~temp")
+
+
+# load and process SST data
+# nc <- nc_open("~temp")
+
+nc <- nc_open("./data/nceiErsstv5_660c_01e2_3ef7.nc")
+
+# process
+
+ncvar_get(nc, "time")   # seconds since 1-1-1970
+raw <- ncvar_get(nc, "time")
+h <- raw/(24*60*60)
+d <- dates(h, origin = c(1,1,1970))
+m <- months(d)
+yr <- years(d)
+
+x <- ncvar_get(nc, "longitude")
+y <- ncvar_get(nc, "latitude")
+
+SST <- ncvar_get(nc, "sst", verbose = F)
+
+SST <- aperm(SST, 3:1)  
+
+SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
+
+# Keep track of corresponding latitudes and longitudes of each column:
+lat <- rep(y, length(x))   
+lon <- rep(x, each = length(y))   
+dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
+
+# plot to check
+
+temp.mean <- colMeans(SST, na.rm=T)
+z <- t(matrix(temp.mean,length(y)))  
+image.plot(x,y,z, col=oceColorsPalette(64))
+contour(x, y, z, add=T)  
+map('world2Hires',c('Canada', 'usa', 'Mexico'), fill=T,add=T, lwd=1, col="lightyellow3")
+
+# calculate monthly mean
+obs.ne.pac.sst <- rowMeans(SST, na.rm = T)
+
+# and annual observed means
+ne.pac.ann.obs.sst <- data.frame(year = 1900:2020,
+                             ersst = tapply(obs.ne.pac.sst, as.numeric(as.character(yr)), mean))
+
+# switch to C from K!
+K_C <- colMeans(ne.pac.annual) > 200
+
+ne.pac.annual[,K_C] <- ne.pac.annual[,K_C] - 273.15
+
+ne.pac.annual.plot <- as.data.frame(ne.pac.annual) %>%
+  mutate(year = 1900:2099) %>%
+  pivot_longer(cols = -year, names_to = "model", values_to = "anomaly")
+
+
+ggplot(ne.pac.annual.plot, aes(year, anomaly, color = model)) +
+  geom_line() +
+  geom_line(data = ne.pac.ann.obs.sst, aes(year, ersst), color = "black", lwd = 1) +
+  ggtitle("Annual SST 1900-2099 (ERSST observations in black)") +
+  ylab("SST (°C)") +
+  theme(axis.title.x = element_blank())
+
+ggsave("./figs/ne_pac_model_obs_sst_time_series.png", width = 7, height = 5, units = 'in')
+
+# save these values for future analysis
+write.csv(ne.pac.annual.plot, "./summaries/ne_pacific_annual_modeled_sst.csv")
+write.csv(ne.pac.ann.obs.sst, "./summaries/ne_pacific_annual_observed_sst.csv")
+
+# calculate warming rate for 1981-2014 for the NE Pacific
+ne.pac.rate <- as.data.frame(ne.pac.annual) %>%
+  mutate(year = 1900:2099) %>%
+  filter(year %in% 1980:2014)
+
+ne.pac.rate <- left_join(ne.pac.rate, ne.pac.ann.obs.sst) %>%
+  select(-year)
+
+yrs <- 1980:2014
+
+ff <- function(x) summary(lm(x ~ yrs))$coef[2,1]*10
+rate <- apply(ne.pac.rate, 2, ff)
+
+coefs <- data.frame(name = names(ne.pac.rate),
+                    warming.rate = rate) 
+
+coefs$name <- reorder(coefs$name, coefs$warming.rate)
+
+ggplot(coefs, aes(name, warming.rate)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
+  ggtitle("NE Pacific warming rate, 1981-2014") +
+  ylab("Warming rate (°C / decade)")
+
+ggsave("./figs/model_warming_rate_NE_Pacific_1981-2014.png", width = 7, height = 5, units = 'in')
 
 
 # now plot annual (non-smoothed) anomalies and also compare AR(1) values with observations
@@ -572,6 +809,9 @@ ggplot(plot.model, aes(year, anomaly, color = model)) +
 
 ggsave("./figs/ssp585_picontrol_anomaly_time_series.png", width = 9, height = 7, units = 'in')
 
+# save for analysis elsewhere!
+write.csv(plot.model, "./summaries/selected_model_scaled_GOA_output.csv")
+write.csv(ersst.plot, "./summaries/ersst_scaled_GOA_output.csv")
 
 ## calculate FAR -----------------------
 
