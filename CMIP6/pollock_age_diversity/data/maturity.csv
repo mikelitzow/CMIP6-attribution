@@ -1,0 +1,14 @@
+Maturity,stage,table type
+1,Immature,11
+2,Developing 1,11
+3,Developing 2,11
+4,Pre-spawning 1,11
+5,Pre-spawning 2,11
+6,Spawning,11
+7,Spent 1,11
+8,Spent 2,11
+1,Immature,3
+2,Developing ,3
+3,Pre-spawning ,3
+4,Spawning,3
+5,Spent ,3
