@@ -4,7 +4,7 @@ library(tidyverse)
 theme_set(theme_bw())
 
 # load data
-dat <- read.csv("./data/estimated_millions_at_age_tab1.10_GOA_2021assessment.csv")
+dat <- read.csv("./pollock_age_diversity/data/estimated_millions_at_age_tab1.10_GOA_2021assessment.csv")
 
 str(dat)
 

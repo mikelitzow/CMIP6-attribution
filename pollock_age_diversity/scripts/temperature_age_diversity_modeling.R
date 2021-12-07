@@ -11,12 +11,12 @@ source("./scripts/stan_utils.R")
 
 
 ## Read in data --------------------------------------------
-data <- read.csv("./data/shannon.age.diversity.acoustic.trawl.data.csv",
+data <- read.csv("./pollock_age_diversity/data/shannon.age.diversity.acoustic.trawl.data.csv",
                  row.names = 1)
 
 
 # add sst data
-sst <- read.csv("./data/goa.sst.csv",
+sst <- read.csv("./pollock_age_diversity/data/goa.sst.csv",
                 row.names = 1)
 
 data <- left_join(data, sst)
