@@ -9,14 +9,16 @@ library(bayesplot)
 library(tidyverse)
 source("./scripts/stan_utils.R")
 
+theme_set(theme_bw())
+
 ## Read in data --------------------------------------------
-obs <- read.csv("./summaries/ersst_scaled_GOA_output.csv", row.names=1)
+obs <- read.csv("./CMIP6/summaries/ersst_scaled_GOA_output.csv", row.names=1)
 
 # add 2-yr and 3-yr running means
 obs$two.yr.mean <- zoo::rollmean(obs$anomaly, 2, fill = NA, align = "right")
 obs$three.yr.mean <- zoo::rollmean(obs$anomaly, 3, fill = NA, align = "right")
 
-mod <- read.csv("./summaries/selected_model_scaled_GOA_output.csv", row.names=1)
+mod <- read.csv("./CMIP6/summaries/selected_model_scaled_GOA_output.csv", row.names=1)
 
 ## calculate FAR for observed SST from each model -----------
 
@@ -79,8 +81,13 @@ for(i in 1:length(models)){
 ggplot(observed.FAR, aes(year, FAR.3, color = model)) +
   geom_line()
 
-ggsave("./figs/obs.FAR.3.by.model.png", width = 8, height = 4)
+ggsave("./CMIP6/figs/obs.FAR.3.by.model.png", width = 8, height = 4)
 
+# same plot for annual SST FAR values
+ggplot(observed.FAR, aes(year, FAR.1, color = model)) +
+  geom_line()
+
+ggsave("./CMIP6/figs/obs.FAR.1.by.model.png", width = 8, height = 4)
 
 # and fit Bayesian regression to estimate across CMIP models
 
