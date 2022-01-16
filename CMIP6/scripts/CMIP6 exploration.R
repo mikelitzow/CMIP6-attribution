@@ -19,7 +19,7 @@ theme_set(theme_bw())
 ## process model outputs ---------------------
 
 # get list of file names
-files <- list.files("./model_outputs/")
+files <- list.files("./CMIP6/CMIP6_outputs/")
 
 # save as a table for write-up
 drop <- grep("245", files)
@@ -40,7 +40,7 @@ for(i in 1:length(files)){
 
   # i <- 1
   
-  path <- paste("./model_outputs/", files[i], sep="")
+  path <- paste("./CMIP6/CMIP6_outputs/", files[i], sep="")
   
   # load file
   nc <- nc_open(path)
@@ -113,11 +113,11 @@ for(i in 1:length(files)){
   # and plot 
 # 
   # png("./figs/CMIP6_spatial_domain.png", 6, 4.5, units = "in", res = 300)
-  # SST.mean <- colMeans(SST)
-  # z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
-  # image(x,y,z, col=new.col, ylim = c(40, 64), xlim = c(140, 240))
-  # contour(x, y, z, add=T, col="white")
-  # map('world2Hires',fill=F,add=T, lwd=2)
+  SST.mean <- colMeans(SST)
+  z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+  image(x,y,z, col=new.col, ylim = c(40, 64), xlim = c(140, 240))
+  contour(x, y, z, add=T, col="white")
+  map('world2Hires',fill=F,add=T, lwd=2)
   # 
   # dev.off()
 
@@ -141,13 +141,13 @@ View(dates)
 
 # load ERSST for comparison - 1900 through 2020
 
-# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-12-01T00:00:00Z)][(0.0):1:(0.0)][(52):1:(62)][(198):1:(226)]", "~temp")
+# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2021-12-01T00:00:00Z)][(0.0):1:(0.0)][(52):1:(62)][(198):1:(226)]", "~temp")
 
 
 # load and process SST data
 # nc <- nc_open("~temp")
 
-nc <- nc_open("./data/nceiErsstv5_bf33_3a9d_7ad9.nc")
+nc <- nc_open("./CMIP6/data/nceiErsstv5_ff4b_09ec_9259.nc")
 
 # process
 
