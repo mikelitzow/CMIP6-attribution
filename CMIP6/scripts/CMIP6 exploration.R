@@ -18,16 +18,36 @@ theme_set(theme_bw())
 
 ## process model outputs ---------------------
 
-# get list of file names
-files <- list.files("./CMIP6/CMIP6_outputs/")
+# compare original CMIP filenames (1900-2099)
+# with new filenames (1850-2099)
+
+files.orig <- list.files("./CMIP6/CMIP6_outputs/1900-2099_runs")
 
 # save as a table for write-up
-drop <- grep("245", files)
+drop <- grep("245", files.orig)
 
-file.table <- files[-drop] %>%
+files.orig <- files.orig[-drop] %>%
   str_remove(".nc")
 
-write.csv(file.table, "./figs/file.table.csv")
+write.csv(files.orig, "./CMIP6/figs/files.table.1900-2099.csv")
+
+files.new <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585")
+
+files.new <- files.new %>%
+  str_remove(".nc")
+
+write.csv(files.new, "./CMIP6/figs/files.table.1900-2099.csv")
+
+# merge
+new <- data.frame(models = files.new,
+                  'run_1850-2099' = "yes")
+
+orig <- data.frame(models = files.orig,
+                   'run_1900-2099' = "yes")
+
+both <- full_join(orig, new)
+
+write.csv(both, "./CMIP6/figs/files.table.both.runs.csv", row.names = F)
 
 # loop through each file, save the file name and experiment,
 # capture the time series of raw temps for area of interest for each file-experiment comparison
@@ -35,12 +55,13 @@ write.csv(file.table, "./figs/file.table.csv")
 # objects for saving dates and temps and file-experiment ID from each realization
 dates <- temps  <- matrix()
 experiment.file <- data.frame()
+files.new <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585")
 
-for(i in 1:length(files)){
+for(i in 1:length(files.new)){
 
   # i <- 1
   
-  path <- paste("./CMIP6/CMIP6_outputs/", files[i], sep="")
+  path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.new[i], sep="")
   
   # load file
   nc <- nc_open(path)
@@ -56,7 +77,7 @@ for(i in 1:length(files)){
   
   # j <- 1
   
-  this.one <- data.frame(file = files[i], 
+  this.one <- data.frame(file = files.new[i], 
                          experiment = ncvar_get(nc, "experiment", start = j, count = 1))
   
   experiment.file <- rbind(experiment.file,
@@ -66,7 +87,7 @@ for(i in 1:length(files)){
 
   d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
   
-  this.name <- paste(files[i], ncvar_get(nc, "experiment", start = j, count = 1), sep = "_")
+  this.name <- paste(files.new[i], ncvar_get(nc, "experiment", start = j, count = 1), sep = "_")
 
   these.dates <- data.frame(this.name = as.character(d))
   dates <- cbind(dates, these.dates)
@@ -141,13 +162,13 @@ View(dates)
 
 # load ERSST for comparison - 1900 through 2020
 
-# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2021-12-01T00:00:00Z)][(0.0):1:(0.0)][(52):1:(62)][(198):1:(226)]", "~temp")
+# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2021-12-01T00:00:00Z)][(0.0):1:(0.0)][(52):1:(62)][(198):1:(226)]", "~temp")
 
 
 # load and process SST data
 # nc <- nc_open("~temp")
 
-nc <- nc_open("./CMIP6/data/nceiErsstv5_ff4b_09ec_9259.nc")
+nc <- nc_open("./CMIP6/data/nceiErsstv5_5d38_fa81_4a70.nc")
 
 # process
 
@@ -205,6 +226,74 @@ obs.sst <- rowMeans(SST, na.rm = T)
 # and annual observed means
 ann.sst <- tapply(obs.sst, as.numeric(as.character(yr)), mean)
 
+################################################
+# aside - make some plots for talks
+
+# get monthly anomalies (remove seasonal signal)
+
+f <- function(x) tapply(x[yr %in% 1900:1999], m[yr %in% 1900:1999], mean)  # function to compute monthly means for a single time series
+mu <- apply(SST, 2, f)	# compute monthly means for each time series (cell)
+mu <- mu[rep(1:12, length(m)/12),]  # replicate means matrix for each year at each location
+
+sst.anom <- SST - mu   # compute matrix of anomalies
+sst.anom <- rowMeans(sst.anom, na.rm=T)
+
+# plot
+plot <- data.frame(year = 1900:2021,
+                   ann.sst = ann.sst)
+ggplot(plot, aes(year, ann.sst)) +
+  geom_line() + geom_point()
+
+
+plot <- data.frame(year = as.numeric(as.character(yr)) + (as.numeric(m)-0.5)/12,
+                   sst.anom = sst.anom)
+
+ggplot(plot, aes(year, sst.anom)) +
+  geom_line() 
+
+# some wild values pre-1950! 
+# will need to replot for now, and consider the implications 
+# for CMIP6 interpretation later
+
+f <- function(x) tapply(x[yr %in% 1950:1999], m[yr %in% 1950:1999], mean)  # function to compute monthly means for a single time series
+mu <- apply(SST, 2, f)	# compute monthly means for each time series (cell)
+mu <- mu[rep(1:12, length(m)/12),]  # replicate means matrix for each year at each location
+
+sst.anom <- SST - mu   # compute matrix of anomalies
+sst.anom <- rowMeans(sst.anom, na.rm=T)
+ann.anom <- tapply(sst.anom, yr, mean)
+
+# plot
+plot <- data.frame(year = 1950:2021,
+                   ann.sst = ann.sst[names(ann.sst) %in% 1950:2021])
+
+ggplot(filter(plot, year %in% 1950:1998), aes(year, ann.sst)) +
+  geom_line() + geom_point() +
+  theme(axis.title.x = element_blank()) +
+  labs(title = "Gulf of Alaska annual mean 
+sea surface temperature 1950-1998",
+       y = "°C")
+
+ggsave("./CMIP6/figs/GOA sst 1950-1998.png", width = 4, height = 3, units = 'in')
+
+ggplot(filter(plot, year %in% 1950:2007), aes(year, ann.sst)) +
+  geom_line() + geom_point() +
+  theme(axis.title.x = element_blank()) +
+  labs(title = "Gulf of Alaska annual mean 
+sea surface temperature 1950-2007",
+       y = "°C")
+
+ggsave("./CMIP6/figs/GOA sst 1950-2007.png", width = 4, height = 3, units = 'in')
+
+
+ggplot(filter(plot, year %in% 1950:2021), aes(year, ann.sst)) +
+  geom_line() + geom_point() +
+  theme(axis.title.x = element_blank()) +
+  labs(title = "Gulf of Alaska annual mean 
+sea surface temperature 1950-2021",
+       y = "°C")
+
+ggsave("./CMIP6/figs/GOA sst 1950-2021.png", width = 4, height = 3, units = 'in')
 
 ## model evaluation --------------------------------------------
 
