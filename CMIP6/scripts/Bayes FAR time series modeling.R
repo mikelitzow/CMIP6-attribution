@@ -7,7 +7,7 @@ library(rstan)
 library(brms)
 library(bayesplot)
 library(tidyverse)
-source("./scripts/stan_utils.R")
+source("./CMIP6/scripts/stan_utils.R")
 
 theme_set(theme_bw())
 
@@ -89,8 +89,97 @@ ggplot(observed.FAR, aes(year, FAR.1, color = model)) +
 
 ggsave("./CMIP6/figs/obs.FAR.1.by.model.png", width = 8, height = 4)
 
-# and fit Bayesian regression to estimate across CMIP models
+## now calculate historical / projected FAR for each model
 
+# object to catch FAR values for each model
+projected.FAR <- data.frame()
+
+
+# loop through each model
+for(i in 1:length(models)){
+  # i <- 1
+  
+  # separate model of interest
+  pre.temp <- preindustrial %>% 
+    dplyr::filter(model == models[i])
+  
+  proj.temp <- hist_ssp585 %>%
+    dplyr::filter(model == models[i])
+  
+  # add 2-yr and 3-yr running means
+  pre.temp$two.yr.mean <- zoo::rollmean(pre.temp$anomaly, 2, fill = NA, align = "right")
+  pre.temp$three.yr.mean <- zoo::rollmean(pre.temp$anomaly, 3, fill = NA, align = "right")
+  
+  proj.temp$two.yr.mean <- zoo::rollmean(proj.temp$anomaly, 2, fill = NA, align = "right")
+  proj.temp$three.yr.mean <- zoo::rollmean(proj.temp$anomaly, 3, fill = NA, align = "right")
+  
+  
+  for(j in 1:nrow(proj.temp)){
+    # j <- 200
+    
+    # calculate FAR for annual, 2-yr, and 3-yr
+    preind.prob <- sum(pre.temp$anomaly >= proj.temp$anomaly[j])/length(pre.temp$anomaly)
+    proj.prob <- sum(proj.temp$anomaly >=  proj.temp$anomaly[j])/length(proj.temp$anomaly)
+    FAR.1 <- 1 - preind.prob/proj.prob
+    
+    preind.prob <- sum(na.omit(pre.temp$two.yr.mean) >= na.omit(proj.temp$two.yr.mean[j]))/length(na.omit(pre.temp$two.yr.mean))
+    proj.prob <- sum(na.omit(proj.temp$two.yr.mean) >=  na.omit(proj.temp$two.yr.mean[j]))/length(na.omit(proj.temp$two.yr.mean))
+    FAR.2 <- 1 - preind.prob/proj.prob
+    
+    preind.prob <- sum(na.omit(pre.temp$three.yr.mean) >= na.omit(proj.temp$three.yr.mean[j]))/length(na.omit(pre.temp$three.yr.mean))
+    proj.prob <- sum(na.omit(proj.temp$three.yr.mean) >=  na.omit(proj.temp$three.yr.mean[j]))/length(na.omit(proj.temp$three.yr.mean))
+    FAR.3 <- 1 - preind.prob/proj.prob
+    
+    projected.FAR <- rbind(projected.FAR, 
+                          data.frame(model = models[i],
+                                     year = proj.temp$year[j],
+                                     FAR.1 = FAR.1,
+                                     FAR.2 = FAR.2,
+                                     FAR.3 = FAR.3))
+    
+  }
+}
+
+# now sort based on warming timing
+
+warming <- read.csv("./CMIP6/summaries/model.ne.pacific.warming.timing.csv", row.names = 1)
+
+FAR.warming <- data.frame()
+
+models <- unique(warming$model)
+levels <- unique(warming$level)
+
+for(i in 1:length(models)){
+  # i <- 1
+  for(j in 1:length(levels)){
+    # j <- 1
+    
+    # select the model and warming level of interest
+    temp <- warming %>%
+      dplyr::filter(model == models[i], level == levels[j])
+    
+    # identify the 10 years after a warming level was reached for a particular model
+    time.frame <- temp$year:(temp$year + 9) 
+    
+    temp.FAR <- projected.FAR %>%
+      dplyr::filter(model == models[i],
+                    year %in% time.frame)
+    
+    FAR.warming <- rbind(FAR.warming, 
+                   data.frame(model = models[i],
+                              level = levels[j],
+                              FAR.1 = temp.FAR$FAR.1,
+                              FAR.2 = temp.FAR$FAR.2,
+                              FAR.3 = temp.FAR$FAR.3))
+  }
+  
+}
+
+# save
+write.csv(FAR.warming, "./CMIP6/summaries/projected_FAR.csv")
+
+### fit Bayesian regression to estimate across CMIP models----------------------
+## first, observations
 # remove na
 observed.FAR <- na.omit(observed.FAR)
 
@@ -197,41 +286,103 @@ pred.obs$se__ <- ce1s_1$year_fac$se__
 
 write.csv(pred.obs, "./summaries/observed_3yr_running_mean_sst_FAR_bayes_estimates.csv")
 
+## now fit Bayes model to projected FAR as a function of NE Pacific warming
+FAR.warming <- read.csv("./CMIP6/summaries/projected_FAR.csv", row.names = 1)
+
+FAR.warming$level <- as.factor(FAR.warming$level)
+
+ggplot(FAR.warming, aes(y = FAR.1, group = level)) +
+  geom_boxplot()
+
+
+
+# change FAR = 1 to FAR = 0.9999 for beta distribution
+
+for(j in 3:5){
+change <- FAR.warming[,j] == 1
+FAR.warming[change, j] <- 0.9999
+}
+
+for(j in 3:5){
+  change <- FAR.warming[,j] <= 0
+  FAR.warming[change, j] <- 0.0001
+}
+
+# and set up explanatory variables as factors
+FAR.warming$model_fac <- as.factor(FAR.warming$model)
+FAR.warming$level_fac <- as.factor(FAR.warming$level)
+
+## Check distribution --------------------------
+hist(FAR.warming$FAR.1, breaks = 50)
+
+## brms: setup ---------------------------------------------
+
+## Define model formulas
+far_formula <-  bf(FAR.1 ~ level_fac + (1 | model_fac))
+
+
+## fit: brms --------------------------------------
+
+## observed time series
+proj_far <- brm(far_formula,
+               data = FAR.warming,
+               family = Beta(),
+               cores = 4, chains = 4, iter = 2500,
+               save_pars = save_pars(all = TRUE),
+               control = list(adapt_delta = 0.99, max_treedepth = 12))
+
+saveRDS(proj_far, file = "brms_output/proj_far.1.rds")
+
+
+check_hmc_diagnostics(proj_far$fit)
+neff_lowest(proj_far$fit)
+rhat_highest(proj_far$fit)
+summary(proj_far)
+bayes_R2(proj_far)
+y <- FAR.warming$FAR.1
+yrep_proj_far  <- fitted(proj_far, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_proj_far[sample(nrow(yrep_proj_far), 25), ]) +
+  ggtitle("proj_far.3")
+
+
+
 
 ########################-----------------
 
 ## THE FOLLOWING SHOULD BE RE-FIT TO HISTORICAL AND SSP_585!
 
+# starting with annual SST FAR - for each model, calculate FAR from hist_ssp585 vs preindustrial
+
 # need to select FAR values based on warming rather than year
 
-warming <- read.csv("./summaries/model.ne.pacific.warming.timing.csv", row.names = 1)
- 
-FAR.3 <- data.frame()
-
-models <- unique(warming$model)
-levels <- unique(warming$level)
-
-for(i in 1:length(models)){
-  # i <- 1
-  for(j in 1:length(levels)){
-    # j <- 1
-    # select the model and warming level of interest
-    temp <- warming %>%
-      dplyr::filter(model == models[i], level == levels[j])
-    # identify the 15 years after a warming level was reached for a particular model
-    time.frame <- temp$year:(temp$year+14) 
-    
-    temp.FAR.3 <- observed.FAR %>%
-      dplyr::filter(model == models[i],
-                    year %in% time.frame)
-    
-    FAR.3 <- rbind(FAR.3, 
-                   data.frame(model = models[i],
-                              level = levels[j],
-                              FAR.3 = temp.FAR.3$FAR.3))
-  }
-  
-}
+# warming <- read.csv("./CMIP6/summaries/model.ne.pacific.warming.timing.csv", row.names = 1)
+#  
+# FAR.1 <- data.frame()
+# 
+# models <- unique(warming$model)
+# levels <- unique(warming$level)
+# 
+# for(i in 1:length(models)){
+#   # i <- 1
+#   for(j in 1:length(levels)){
+#     # j <- 1
+#     # select the model and warming level of interest
+#     temp <- warming %>%
+#       dplyr::filter(model == models[i], level == levels[j])
+#     # identify the 15 years after a warming level was reached for a particular model
+#     time.frame <- temp$year:(temp$year+14) 
+#     
+#     temp.FAR.3 <- observed.FAR %>%
+#       dplyr::filter(model == models[i],
+#                     year %in% time.frame)
+#     
+#     FAR.3 <- rbind(FAR.3, 
+#                    data.frame(model = models[i],
+#                               level = levels[j],
+#                               FAR.3 = temp.FAR.3$FAR.3))
+#   }
+#   
+# }
 
 
 

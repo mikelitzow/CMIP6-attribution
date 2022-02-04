@@ -228,10 +228,30 @@ ann.sst <- tapply(obs.sst, as.numeric(as.character(yr)), mean)
 
 ## model evaluation --------------------------------------------
 
-# combine observations and historical simulations in one df
-compare.sst <- data.frame(year = as.numeric(names(ann.sst)),
-                          historical = ann.sst)
+# evaluate behavior of ERSST - in the past we've seen implausible
+# monthly values in the 1st half of the 20th century
 
+# first, calculate monthly anomalies
+
+f <- function(x) tapply(x, m, mean)  # function to compute monthly means for a single time series
+mu <- apply(SST, 2, f)	# compute monthly means for each time series (cell)
+mu <- mu[rep(1:12, length(m)/12),]  # replicate means matrix for each year at each location
+
+sst.anom <- SST - mu   # compute matrix of anomalies
+
+obs.plot <- data.frame(monthly.anom = rowMeans(sst.anom, na.rm = T),
+                       date = lubridate::parse_date_time(x = paste(yr,as.numeric(m),"01"),orders="ymd",tz="America/Anchorage"))
+
+ggplot(obs.plot, aes(date, monthly.anom)) +
+  geom_line(lwd = 0.02)
+
+# Strong pattern - large monthly anomalies before 1950
+# I think we should limit comparison to 1950:2014
+# combine observations and historical simulations in one df
+
+compare.sst <- data.frame(year = as.numeric(names(ann.sst)),
+                          historical = ann.sst) %>%
+  filter(year %in% 1950:2014)
 
 ggplot(compare.sst, aes(year, historical)) +
   geom_line()
@@ -243,18 +263,18 @@ ggplot(compare.sst, aes(year, historical)) +
 hist <- grep("hist", experiment.file$experiment)
 
 # drop first column of temps
-temps <- temps[,2:ncol(temps)]
+temps.use <- temps[,2:ncol(temps)]
 
 # check we have the correct number of temperature outputs
-identical(ncol(temps), nrow(experiment.file)) # looks good
+identical(ncol(temps.use), nrow(experiment.file)) # looks good
 
-historical.temps <- temps[, hist]
+historical.temps <- temps.use[, hist]
 names(historical.temps) <- experiment.file$file[hist]
 
 # get annual means for each
 
 # get years for one of the runs (they're all the same!)
-path <- paste("./model_outputs/", files[i], sep="")
+path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.new[i], sep="")
 
 nc <- nc_open(path)
 
@@ -267,7 +287,7 @@ f <- function(x) tapply(x, years, mean)
 
 ann.hist.temps <- as.data.frame(apply(historical.temps, 2, f))
 
-ann.hist.temps$year <- 1900:2099
+ann.hist.temps$year <- 1850:2099
 
 compare.sst <- left_join(compare.sst, ann.hist.temps)
 
@@ -289,7 +309,8 @@ mean.compare <- data.frame(names = as.factor(names(compare.sst)),
                            mean = colMeans(compare.sst))
 
 ggplot(mean.compare, aes(names, mean)) +
-  geom_bar(stat = "identity")
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90))
 
 
 # compare bias in climatology and correlation with historical
@@ -303,11 +324,6 @@ bias <- colMeans(historical.runs) - mean(ersst)
 plot.bias <- data.frame(name = names(bias),
                         bias = abs(bias)) 
 
-# drop _245; these are repeats with different scenarios
-
-drop <- grep("_245", plot.bias$name)
-plot.bias <- plot.bias[-drop,]
-
 # clean up model names
 plot.bias$name <- str_remove(plot.bias$name, ".nc")
 
@@ -318,9 +334,9 @@ theme_set(theme_bw())
 ggplot(plot.bias, aes(name, bias)) +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
-  labs(title = "Bias, 1900-2020", y = "Absolute value of bias (°C)")
+  labs(title = "Bias, 1950-2014", y = "Absolute value of bias (°C)")
 
-ggsave("./figs/model_bias.png", width = 7, height = 5, units = 'in')
+ggsave("./CMIP6/figs/model_bias.png", width = 7, height = 5, units = 'in')
 
 # calculate correlation for low-frequency variability (smoothed with 10-yr running means)
 ff <- function(x) zoo::rollmean(x, 10, fill = NA)
@@ -333,19 +349,17 @@ correlation <- cor(historical.smoothed, ersst.smoothed, use = "p")
 plot.correlation <- data.frame(name = rownames(correlation),
                         correlation = correlation) 
 
-drop <- grep("_245", plot.correlation$name)
-plot.correlation <- plot.correlation[-drop,]
-
 plot.correlation$name <- str_remove(plot.correlation$name, ".nc")
 plot.correlation$name <- reorder(plot.correlation$name, plot.correlation$correlation)
 
 arrange(plot.correlation, desc(correlation))
 
 ggplot(plot.correlation, aes(name, correlation)) +
-  geom_bar(stat = "identity") +P
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) 
 
 
-ggsave("./figs/model_correlation.png", width = 7, height = 5, units = 'in')
+ggsave("./CMIP6/figs/model_correlation.png", width = 7, height = 5, units = 'in')
 
 # combine a plot of bias and correlation
 bias.corr <- left_join(plot.bias, plot.correlation)
@@ -353,13 +367,13 @@ bias.corr <- left_join(plot.bias, plot.correlation)
 ggplot(bias.corr, aes(bias, correlation, label = name)) +
   geom_text() 
 
-ggsave("./figs/model_bias_vs_correlation.png", width = 8, height = 6, units = 'in')
+ggsave("./CMIP/figs/model_bias_vs_correlation.png", width = 8, height = 6, units = 'in')
 
 # suggests a cluster of high correlation, low bias models
 # use this group, identify based on correlation
-# (r > 0.45), bias-correct, and plot against ERSST observations
+# (r > 0.4), bias-correct, and plot against ERSST observations
 
-use <- as.vector(plot.correlation$name[plot.correlation$correlation > 0.45])
+use <- as.vector(plot.correlation$name[plot.correlation$correlation > 0.4])
 
 # subset historical smooths with only the "use" models
 keep <- names(historical.smoothed) %in% use
@@ -376,22 +390,22 @@ names(bias) <- str_remove(names(bias), ".nc")
 
 best.model.bias <- bias[names(bias) %in% use]
 
-# # check that names line up
-# identical(names(best.model.bias), names(best.model.smoothed)) # yes!
-# 
-# # bias-correct smoothed time series for best models
-# best.model.smoothed.bias.corrected <- best.model.smoothed - best.model.bias
+# check that names line up
+identical(names(best.model.bias), names(best.model.smoothed)) # yes!
+
+# bias-correct smoothed time series for best models
+best.model.smoothed.bias.corrected <- best.model.smoothed - best.model.bias
 
 ff <- function(x) as.vector(scale(x))
 
 best.model.smoothed.anomaly <- apply(best.model.smoothed, 2, ff)
 
 best.model.smoothed.anomaly <- as.data.frame(best.model.smoothed.anomaly) %>% 
-  mutate(year = 1900:2020) %>%
+  mutate(year = 1950:2014) %>%
   pivot_longer(cols = -year, values_to = "anomaly") %>%
   rename(model = name)
 
-ersst.smoothed.anomaly <- data.frame(year = 1900:2020,
+ersst.smoothed.anomaly <- data.frame(year = 1950:2014,
                                      anomaly = as.vector(scale(ersst.smoothed)))
 
 
@@ -404,7 +418,7 @@ ggplot(best.model.smoothed.anomaly, aes(year, anomaly, color = model)) +
   geom_hline(yintercept = 0, color = "dark grey")
 
 
-ggsave("./figs/ersst_vs_best_bias_models_smoothed.png", width = 8, height = 5, units = 'in')
+ggsave("./CMIP6/figs/ersst_vs_best_bias_models_smoothed.png", width = 8, height = 5, units = 'in')
 
 # based on TCR constraint idea - compare warming trend during 1981-2014 for ERSST and best models
 
