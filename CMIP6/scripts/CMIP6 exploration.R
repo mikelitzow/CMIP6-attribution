@@ -424,11 +424,10 @@ ggsave("./CMIP6/figs/ersst_vs_best_bias_models_smoothed.png", width = 8, height 
 ## evaluate North Pacific-wide warming rate for the same models -------------------
 
 # start from the beginning - get list of file names
-files <- list.files("./model_outputs/")
+files <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/")
 
 # loop through each file, save the file name and experiment,
 # capture the time series of raw temps for area of interest for each file-experiment comparison
-
 
 files.use <- vector()
 
@@ -442,12 +441,6 @@ for(i in 1:length(use)){
   files.use <- c(files.use, files[pick])
   
 }
-
-# and remove ssp 245
-
-drop <- grep("245", files.use)
-
-files.use <- files.use[-drop]
 
 
 # objects for saving dates and temps and file-experiment ID from each realization
