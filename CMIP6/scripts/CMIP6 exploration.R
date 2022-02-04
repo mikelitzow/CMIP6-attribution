@@ -624,7 +624,8 @@ obs.n.pac.sst <- rowMeans(SST, na.rm = T)
 
 # and annual observed means
 n.pac.ann.obs.sst <- data.frame(year = 1854:2021,
-                             ersst = tapply(obs.n.pac.sst, as.numeric(as.character(yr)), mean))
+                             ersst = tapply(obs.n.pac.sst, as.numeric(as.character(yr)), mean),
+                             observations = "ERSST")
 
 # and observed warming rate
 n.pac.obs.warming <- data.frame(year = 1854:2021,
@@ -652,6 +653,7 @@ check <- rbind(check.control, check.hist)
 
 ggplot(check, aes(year, value, color = experiment)) +
   geom_line() +
+  geom_line(data = n.pac.ann.obs.sst, aes(year, ersst, color = observations), lwd = 1) +
   facet_wrap(~name)
 
 ggsave("./CMIP6/figs/control_hist585_comparison.png", width = 8, height = 6, units = 'in')
@@ -671,13 +673,6 @@ warming.rate <- as.data.frame(warming.rate) %>%
   mutate(year = 1850:2099) %>%
   pivot_longer(cols = -year)
 
-
-ggplot(warming.rate, aes(year, value, color = name)) +
-  geom_line() +
-  ggtitle("Estimated warming rate") +
-  ylab("SST (°C)") +
-  theme(axis.title.x = element_blank()) +
-geom_line(data = n.pac.ann.obs.sst, aes(year, ersst)) 
 
 ggplot(warming.rate, aes(year, value, color = name)) +
   geom_line() +
