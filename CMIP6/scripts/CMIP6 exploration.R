@@ -423,6 +423,8 @@ ggsave("./CMIP6/figs/ersst_vs_best_bias_models_smoothed.png", width = 8, height 
 
 ## evaluate North Pacific-wide warming rate for the same models -------------------
 
+# compare historical / ssp585 with pre-industrial 
+
 # start from the beginning - get list of file names
 files <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/")
 
@@ -444,14 +446,13 @@ for(i in 1:length(use)){
 
 
 # objects for saving dates and temps and file-experiment ID from each realization
-ne.pac.temps  <- matrix()
-ne.pac.experiment <- data.frame()
+piControl.temps <- hist.585.temps  <- matrix()
 
 for(i in 1:length(files.use)){
   
   # i <- 1
   
-  path <- paste("./model_outputs/", files.use[i], sep="")
+  path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.use[i], sep="")
   
   # load file
   nc <- nc_open(path)
@@ -479,7 +480,6 @@ for(i in 1:length(files.use)){
     d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
     
     # extract spatial area
-    # 20-68 deg. N, 120-250 deg. E
     x <- ncvar_get(nc, "lon")
     y <- ncvar_get(nc, "lat")
     
@@ -492,32 +492,66 @@ for(i in 1:length(files.use)){
     SST <- aperm(SST, 3:1)
     
     # Change to matrix with column for each grid point, rows for monthly means
-    SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
+    SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3])) 
     
-    # Keep track of corresponding latitudes and longitudes of each column:
-    lat <- rep(y, length(x))   
-    lon <- rep(x, each = length(y))   
-    dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
+    # plot to check 
+    png(paste("./CMIP6/figs/", files.use[i], "_spatial_domain.png", sep = ""), 6, 4.5, units = "in", res = 300)
+    SST.mean <- colMeans(SST)
+    z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+    image(x,y,z, col=new.col)
+    contour(x, y, z, add=T, col="white")
+    map('world2Hires',fill=F,add=T, lwd=2)
     
+    dev.off()
+    
+    colname <- files.use[i]
+    these.temps <- data.frame(xx = rowMeans(SST, na.rm = T))
+    names(these.temps)<-  str_remove(files.use[i], ".nc")
+    
+    hist.585.temps <- cbind(hist.585.temps, these.temps)
+    
+    } # close if 
+    
+    
+    if(ncvar_get(nc, "experiment", start = j, count = 1) == "piControl"){
+      
 
-    these.temps <- data.frame(this.name = rowMeans(SST, na.rm = T))
+      # extract spatial area
+      x <- ncvar_get(nc, "lon")
+      y <- ncvar_get(nc, "lat")
+      
+      
+      SST <- ncvar_get(nc, "tos", verbose = F, start = c(j,1,1,1), count = c(1,-1,-1,-1))
+      
+      
+      # Change data from a 3-D array to a matrix of monthly data by grid point:
+      # First, reverse order of dimensions ("transpose" array)
+      SST <- aperm(SST, 3:1)
+      
+      # Change to matrix with column for each grid point, rows for monthly means
+      SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3])) 
+      
 
-    ne.pac.temps <- cbind(ne.pac.temps, these.temps)
-    
+      colname <- files.use[i]
+      these.temps <- data.frame(xx = rowMeans(SST, na.rm = T))
+      names(these.temps)<-  str_remove(files.use[i], ".nc")
+      
+      piControl.temps <- cbind(piControl.temps, these.temps)
+      
     } # close if 
     
   } # close j
 } # close i
 
-ne.pac.temps <- ne.pac.temps[,-1]
-
-names(ne.pac.temps) <- files.use
+# remove leading column of NAs
+piControl.temps <- piControl.temps[,-1]
+hist.585.temps <- hist.585.temps[,-1]
 
 # get annual means
 ff <- function(x) tapply(x, as.numeric(as.character(years((d)))), mean)
 
-ne.pac.annual <- apply(ne.pac.temps, 2, ff)
-
+hist.585.annual <- apply(hist.585.temps, 2, ff)
+piControl.annual <- apply(piControl.temps, 2, ff)
 # and ersst for the same area
 
 # download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-12-01T00:00:00Z)][(0.0):1:(0.0)][(10):1:(62)][(180):1:(260)]", "~temp")
@@ -589,7 +623,7 @@ ggsave("./figs/ne_pac_model_obs_sst_time_series.png", width = 7, height = 5, uni
 write.csv(ne.pac.annual.plot, "./summaries/ne_pacific_annual_modeled_sst.csv")
 write.csv(ne.pac.ann.obs.sst, "./summaries/ne_pacific_annual_observed_sst.csv")
 
-# calculate warming rate for 1981-2014 for the NE Pacific
+# calculate warming rate wrt preindustrial runs
 ne.pac.rate <- as.data.frame(ne.pac.annual) %>%
   mutate(year = 1900:2099) %>%
   filter(year %in% 1980:2014)
