@@ -462,7 +462,7 @@ for(i in 1:length(files.use)){
   # extract one experiment at a time and save with file name
   
   # get list of experiments
-  # experiments <-  ncvar_get(nc, "experiment", verbose = F)
+  experiments <-  ncvar_get(nc, "experiment", verbose = F)
   
   for(j in 1:length(experiments)){
     
@@ -472,20 +472,18 @@ for(i in 1:length(files.use)){
     temp <- data.frame(model = use[i],
                        experiment = ncvar_get(nc, "experiment", start = j, count = 1))
     
-    ne.pac.experiment <- rbind(temp,
-                               ne.pac.experiment)
+
     
     # extract dates
     
     d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
+    yr <- as.numeric(as.character(years(d)))
     
     # extract spatial area
     x <- ncvar_get(nc, "lon")
     y <- ncvar_get(nc, "lat")
     
-    
     SST <- ncvar_get(nc, "tos", verbose = F, start = c(j,1,1,1), count = c(1,-1,-1,-1))
-    
     
     # Change data from a 3-D array to a matrix of monthly data by grid point:
     # First, reverse order of dimensions ("transpose" array)
@@ -494,9 +492,14 @@ for(i in 1:length(files.use)){
     # Change to matrix with column for each grid point, rows for monthly means
     SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3])) 
     
+    # remove  values south of 20N
+    drop <- lat < 20
+    
+    SST[,drop] <- NA
+    
     # plot to check 
-    png(paste("./CMIP6/figs/", files.use[i], "_spatial_domain.png", sep = ""), 6, 4.5, units = "in", res = 300)
-    SST.mean <- colMeans(SST)
+    png(paste("./CMIP6/figs/", files.use[i], "_hist_spatial_means_1850-1949.png", sep = ""), 6, 4.5, units = "in", res = 300)
+    SST.mean <- colMeans(SST[yr < 1950,])
     z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
     image(x,y,z, col=new.col)
     contour(x, y, z, add=T, col="white")
@@ -504,7 +507,6 @@ for(i in 1:length(files.use)){
     
     dev.off()
     
-    colname <- files.use[i]
     these.temps <- data.frame(xx = rowMeans(SST, na.rm = T))
     names(these.temps)<-  str_remove(files.use[i], ".nc")
     
@@ -520,6 +522,11 @@ for(i in 1:length(files.use)){
       x <- ncvar_get(nc, "lon")
       y <- ncvar_get(nc, "lat")
       
+      # Keep track of corresponding latitudes and longitudes of each column:
+      lat <- rep(y, length(x))   
+      lon <- rep(x, each = length(y))   
+      dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
+      
       
       SST <- ncvar_get(nc, "tos", verbose = F, start = c(j,1,1,1), count = c(1,-1,-1,-1))
       
@@ -531,8 +538,22 @@ for(i in 1:length(files.use)){
       # Change to matrix with column for each grid point, rows for monthly means
       SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3])) 
       
+      # remove  values south of 20N
+      drop <- lat < 20
+      
+      SST[,drop] <- NA
+      
+      # plot to check 
+      png(paste("./CMIP6/figs/", files.use[i], "_piControl_spatial_means.png", sep = ""), 6, 4.5, units = "in", res = 300)
+      SST.mean <- colMeans(SST)
+      z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+      image(x,y,z, col=new.col)
+      contour(x, y, z, add=T, col="white")
+      map('world2Hires',fill=F,add=T, lwd=2)
+      
+      dev.off()
+      
 
-      colname <- files.use[i]
       these.temps <- data.frame(xx = rowMeans(SST, na.rm = T))
       names(these.temps)<-  str_remove(files.use[i], ".nc")
       
@@ -550,74 +571,111 @@ hist.585.temps <- hist.585.temps[,-1]
 # get annual means
 ff <- function(x) tapply(x, as.numeric(as.character(years((d)))), mean)
 
+
+
 hist.585.annual <- apply(hist.585.temps, 2, ff)
 piControl.annual <- apply(piControl.temps, 2, ff)
+
+
+
+
 # and ersst for the same area
 
-# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-12-01T00:00:00Z)][(0.0):1:(0.0)][(10):1:(62)][(180):1:(260)]", "~temp")
-
-
-# load and process SST data
-# nc <- nc_open("~temp")
-
-nc <- nc_open("./data/nceiErsstv5_660c_01e2_3ef7.nc")
-
-# process
-
-ncvar_get(nc, "time")   # seconds since 1-1-1970
-raw <- ncvar_get(nc, "time")
-h <- raw/(24*60*60)
-d <- dates(h, origin = c(1,1,1970))
-m <- months(d)
-yr <- years(d)
-
-x <- ncvar_get(nc, "longitude")
-y <- ncvar_get(nc, "latitude")
-
-SST <- ncvar_get(nc, "sst", verbose = F)
-
-SST <- aperm(SST, 3:1)  
-
-SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
-
-# Keep track of corresponding latitudes and longitudes of each column:
-lat <- rep(y, length(x))   
-lon <- rep(x, each = length(y))   
-dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
-
-# plot to check
-
-temp.mean <- colMeans(SST, na.rm=T)
-z <- t(matrix(temp.mean,length(y)))  
-image.plot(x,y,z, col=oceColorsPalette(64))
-contour(x, y, z, add=T)  
-map('world2Hires',c('Canada', 'usa', 'Mexico'), fill=T,add=T, lwd=1, col="lightyellow3")
-
-# calculate monthly mean
-obs.ne.pac.sst <- rowMeans(SST, na.rm = T)
-
-# and annual observed means
-ne.pac.ann.obs.sst <- data.frame(year = 1900:2020,
-                             ersst = tapply(obs.ne.pac.sst, as.numeric(as.character(yr)), mean))
+# # download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-12-01T00:00:00Z)][(0.0):1:(0.0)][(10):1:(62)][(180):1:(260)]", "~temp")
+# 
+# # load and process SST data
+# # nc <- nc_open("~temp")
+# 
+# nc <- nc_open("./data/nceiErsstv5_660c_01e2_3ef7.nc")
+# 
+# # process
+# 
+# ncvar_get(nc, "time")   # seconds since 1-1-1970
+# raw <- ncvar_get(nc, "time")
+# h <- raw/(24*60*60)
+# d <- dates(h, origin = c(1,1,1970))
+# m <- months(d)
+# yr <- years(d)
+# 
+# x <- ncvar_get(nc, "longitude")
+# y <- ncvar_get(nc, "latitude")
+# 
+# SST <- ncvar_get(nc, "sst", verbose = F)
+# 
+# SST <- aperm(SST, 3:1)  
+# 
+# SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
+# 
+# # Keep track of corresponding latitudes and longitudes of each column:
+# lat <- rep(y, length(x))   
+# lon <- rep(x, each = length(y))   
+# dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
+# 
+# # plot to check
+# 
+# temp.mean <- colMeans(SST, na.rm=T)
+# z <- t(matrix(temp.mean,length(y)))  
+# image.plot(x,y,z, col=oceColorsPalette(64))
+# contour(x, y, z, add=T)  
+# map('world2Hires',c('Canada', 'usa', 'Mexico'), fill=T,add=T, lwd=1, col="lightyellow3")
+# 
+# # calculate monthly mean
+# obs.ne.pac.sst <- rowMeans(SST, na.rm = T)
+# 
+# # and annual observed means
+# ne.pac.ann.obs.sst <- data.frame(year = 1900:2020,
+#                              ersst = tapply(obs.ne.pac.sst, as.numeric(as.character(yr)), mean))
 
 # switch to C from K!
-K_C <- colMeans(ne.pac.annual) > 200
+K_C <- colMeans(hist.585.annual) > 200
 
-ne.pac.annual[,K_C] <- ne.pac.annual[,K_C] - 273.15
+hist.585.annual[,K_C] <- hist.585.annual[,K_C] - 273.15
+piControl.annual[,K_C] <- piControl.annual[,K_C] - 273.15
 
-ne.pac.annual.plot <- as.data.frame(ne.pac.annual) %>%
-  mutate(year = 1900:2099) %>%
-  pivot_longer(cols = -year, names_to = "model", values_to = "anomaly")
+# compare time series!
 
+check.hist <- as.data.frame(hist.585.annual) %>%
+  mutate(experiment = "hist.ssp585",
+         year = 1850:2099) %>%
+  pivot_longer(cols = c(-year, -experiment))
 
-ggplot(ne.pac.annual.plot, aes(year, anomaly, color = model)) +
+check.control <- as.data.frame(piControl.annual) %>%
+  mutate(experiment = "piControl",
+         year = 1850:2099) %>%
+  pivot_longer(cols = c(-year, -experiment))
+
+check <- rbind(check.control, check.hist)
+
+ggplot(check, aes(year, value, color = experiment)) +
   geom_line() +
-  geom_line(data = ne.pac.ann.obs.sst, aes(year, ersst), color = "black", lwd = 1) +
-  ggtitle("Annual SST 1900-2099 (ERSST observations in black)") +
+  facet_wrap(~name)
+
+ggsave("./CMIP6/figs/control_hist585_comparison.png", width = 8, height = 6, units = 'in')
+
+# now calculate warming rate
+warming.rate <- hist.585.annual
+
+for(j in 1:ncol(hist.585.annual)){
+  
+  warming.rate[,j] <- hist.585.annual[,j] - colMeans(hist.585.annual[1:100,])[j]
+  
+}
+
+colMeans(hist.585.annual[1:100,])
+colMeans
+
+warming.rate <- as.data.frame(warming.rate) %>%
+  mutate(year = 1850:2099) %>%
+  pivot_longer(cols = -year)
+
+
+ggplot(warming.rate, aes(year, value, color = name)) +
+  geom_line() +
+  ggtitle("Estimated warming rate") +
   ylab("SST (°C)") +
   theme(axis.title.x = element_blank())
 
-ggsave("./figs/ne_pac_model_obs_sst_time_series.png", width = 7, height = 5, units = 'in')
+ggsave("./CMIP6/figs/n_pac_model_estimated_warming_rate.png", width = 7, height = 5, units = 'in')
 
 # save these values for future analysis
 write.csv(ne.pac.annual.plot, "./summaries/ne_pacific_annual_modeled_sst.csv")
