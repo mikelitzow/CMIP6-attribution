@@ -581,51 +581,55 @@ piControl.annual <- apply(piControl.temps, 2, ff)
 
 # and ersst for the same area
 
-# # download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1900-01-01):1:(2020-12-01T00:00:00Z)][(0.0):1:(0.0)][(10):1:(62)][(180):1:(260)]", "~temp")
-# 
-# # load and process SST data
-# # nc <- nc_open("~temp")
-# 
-# nc <- nc_open("./data/nceiErsstv5_660c_01e2_3ef7.nc")
-# 
-# # process
-# 
-# ncvar_get(nc, "time")   # seconds since 1-1-1970
-# raw <- ncvar_get(nc, "time")
-# h <- raw/(24*60*60)
-# d <- dates(h, origin = c(1,1,1970))
-# m <- months(d)
-# yr <- years(d)
-# 
-# x <- ncvar_get(nc, "longitude")
-# y <- ncvar_get(nc, "latitude")
-# 
-# SST <- ncvar_get(nc, "sst", verbose = F)
-# 
-# SST <- aperm(SST, 3:1)  
-# 
-# SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
-# 
-# # Keep track of corresponding latitudes and longitudes of each column:
-# lat <- rep(y, length(x))   
-# lon <- rep(x, each = length(y))   
-# dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
-# 
-# # plot to check
-# 
-# temp.mean <- colMeans(SST, na.rm=T)
-# z <- t(matrix(temp.mean,length(y)))  
-# image.plot(x,y,z, col=oceColorsPalette(64))
-# contour(x, y, z, add=T)  
-# map('world2Hires',c('Canada', 'usa', 'Mexico'), fill=T,add=T, lwd=1, col="lightyellow3")
-# 
-# # calculate monthly mean
-# obs.ne.pac.sst <- rowMeans(SST, na.rm = T)
-# 
-# # and annual observed means
-# ne.pac.ann.obs.sst <- data.frame(year = 1900:2020,
-#                              ersst = tapply(obs.ne.pac.sst, as.numeric(as.character(yr)), mean))
+# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2021-12-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(66)][(110):1:(250)]", "~temp")
 
+# load and process SST data
+# nc <- nc_open("~temp")
+
+nc <- nc_open("./CMIP6/data/nceiErsstv5_c5fc_6a40_5e5b.nc")
+
+# process
+
+ncvar_get(nc, "time")   # seconds since 1-1-1970
+raw <- ncvar_get(nc, "time")
+h <- raw/(24*60*60)
+d <- dates(h, origin = c(1,1,1970))
+m <- months(d)
+yr <- years(d)
+
+x <- ncvar_get(nc, "longitude")
+y <- ncvar_get(nc, "latitude")
+
+SST <- ncvar_get(nc, "sst", verbose = F)
+
+SST <- aperm(SST, 3:1)
+
+SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))
+
+# Keep track of corresponding latitudes and longitudes of each column:
+lat <- rep(y, length(x))
+lon <- rep(x, each = length(y))
+dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
+
+# plot to check
+
+temp.mean <- colMeans(SST, na.rm=T)
+z <- t(matrix(temp.mean,length(y)))
+image.plot(x,y,z, col=oceColorsPalette(64))
+contour(x, y, z, add=T)
+map('world2Hires',c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China', 'Mongolia'), fill=T,add=T, lwd=1, col="lightyellow3")
+
+# calculate monthly mean
+obs.n.pac.sst <- rowMeans(SST, na.rm = T)
+
+# and annual observed means
+n.pac.ann.obs.sst <- data.frame(year = 1854:2021,
+                             ersst = tapply(obs.n.pac.sst, as.numeric(as.character(yr)), mean))
+
+# and observed warming rate
+n.pac.obs.warming <- data.frame(year = 1854:2021,
+                                ersst.warming = n.pac.ann.obs.sst$ersst - 
+                                  mean(n.pac.ann.obs.sst$ersst[n.pac.ann.obs.sst$year %in% 1854:1949]))
 # switch to C from K!
 K_C <- colMeans(hist.585.annual) > 200
 
@@ -662,7 +666,6 @@ for(j in 1:ncol(hist.585.annual)){
 }
 
 colMeans(hist.585.annual[1:100,])
-colMeans
 
 warming.rate <- as.data.frame(warming.rate) %>%
   mutate(year = 1850:2099) %>%
@@ -672,6 +675,14 @@ warming.rate <- as.data.frame(warming.rate) %>%
 ggplot(warming.rate, aes(year, value, color = name)) +
   geom_line() +
   ggtitle("Estimated warming rate") +
+  ylab("SST (°C)") +
+  theme(axis.title.x = element_blank()) +
+geom_line(data = n.pac.ann.obs.sst, aes(year, ersst)) 
+
+ggplot(warming.rate, aes(year, value, color = name)) +
+  geom_line() +
+  geom_line(data = n.pac.obs.warming, aes(year, ersst.warming), color = "black", lwd = 1) +
+  ggtitle("Annual SST 1900-2099 (ERSST observations in black)") +
   ylab("SST (°C)") +
   theme(axis.title.x = element_blank())
 
