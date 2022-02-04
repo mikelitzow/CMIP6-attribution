@@ -420,37 +420,8 @@ ggplot(best.model.smoothed.anomaly, aes(year, anomaly, color = model)) +
 
 ggsave("./CMIP6/figs/ersst_vs_best_bias_models_smoothed.png", width = 8, height = 5, units = 'in')
 
-# based on TCR constraint idea - compare warming trend during 1981-2014 for ERSST and best models
 
-# remove ssp 245
-drop <- grep("_245", names(historical.runs))
-historical.585 <- historical.runs[,-drop]
-
-historical.585.use <- historical.585 %>%
-  select(use) %>%
-  mutate(year = 1900:2020, ersst = ersst) %>%
-  filter(year %in% 1980:2014) %>%
-  select(-year)
-
-yrs <- 1980:2014
-
-ff <- function(x) summary(lm(x ~ yrs))$coef[2,1]*10
-
-coefs <- data.frame(name = names(historical.585.use),
-                    warming.rate = apply(historical.585.use, 2, ff)) 
-
-coefs$name <- reorder(coefs$name, coefs$warming.rate)
-
-ggplot(coefs, aes(name, warming.rate)) +
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
-  ggtitle("GOA warming rate, 1981-2014") +
-  ylab("Warming rate (°C / decade)")
-
-ggsave("./figs/model_warming_rate_GOA_1981-2014.png", width = 7, height = 5, units = 'in')
-
-
-## evaluate NE Pacific-wide warming rate for the same models -------------------
+## evaluate North Pacific-wide warming rate for the same models -------------------
 
 # start from the beginning - get list of file names
 files <- list.files("./model_outputs/")
