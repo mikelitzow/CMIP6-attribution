@@ -133,14 +133,14 @@ for(i in 1:length(files.new)){
   SST[,drop] <- NA  
   # and plot 
 # 
-  # png("./figs/CMIP6_spatial_domain.png", 6, 4.5, units = "in", res = 300)
-  SST.mean <- colMeans(SST)
-  z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
-  image(x,y,z, col=new.col, ylim = c(40, 64), xlim = c(140, 240))
-  contour(x, y, z, add=T, col="white")
-  map('world2Hires',fill=F,add=T, lwd=2)
-  # 
-  # dev.off()
+  # # png("./figs/CMIP6_spatial_domain.png", 6, 4.5, units = "in", res = 300)
+  # SST.mean <- colMeans(SST)
+  # z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
+  # image(x,y,z, col=new.col, ylim = c(40, 64), xlim = c(140, 240))
+  # contour(x, y, z, add=T, col="white")
+  # map('world2Hires',fill=F,add=T, lwd=2)
+  # # 
+  # # dev.off()
 
   
   # get average temperature
@@ -244,6 +244,8 @@ obs.plot <- data.frame(monthly.anom = rowMeans(sst.anom, na.rm = T),
 
 ggplot(obs.plot, aes(date, monthly.anom)) +
   geom_line(lwd = 0.02)
+
+ggsave("./CMIP6/figs/GOA_ERSST_monthly_amonalies_1854-2021.png", width = 7, height = 4, units = 'in')
 
 # Strong pattern - large monthly anomalies before 1950
 # I think we should limit comparison to 1950:2014
