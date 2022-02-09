@@ -252,10 +252,10 @@ ggsave("./CMIP6/figs/GOA_ERSST_monthly_amonalies_1854-2021.png", width = 7, heig
 # combine observations and historical simulations in one df
 
 compare.sst <- data.frame(year = as.numeric(names(ann.sst)),
-                          historical = ann.sst) %>%
+                          ERSST = ann.sst) %>%
   filter(year %in% 1950:2014)
 
-ggplot(compare.sst, aes(year, historical)) +
+ggplot(compare.sst, aes(year, ERSST)) +
   geom_line()
 
 # now get annual means of historical experiments!
@@ -291,7 +291,11 @@ ann.hist.temps <- as.data.frame(apply(historical.temps, 2, f))
 
 ann.hist.temps$year <- 1850:2099
 
-compare.sst <- left_join(compare.sst, ann.hist.temps)
+# this left_join restricts to the reference period 
+# defined by the overlap of trustworthy ERSST  for GOA regions (1950-2012)
+# and historical simulation period for CMIP6 (1850-2014)
+
+compare.sst <- left_join(compare.sst, ann.hist.temps) 
 
 # seems to be an offset in units??
 
@@ -360,7 +364,6 @@ ggplot(plot.correlation, aes(name, correlation)) +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) 
 
-
 ggsave("./CMIP6/figs/model_correlation.png", width = 7, height = 5, units = 'in')
 
 # combine a plot of bias and correlation
@@ -369,9 +372,85 @@ bias.corr <- left_join(plot.bias, plot.correlation)
 ggplot(bias.corr, aes(bias, correlation, label = name)) +
   geom_text() 
 
-ggsave("./CMIP/figs/model_bias_vs_correlation.png", width = 8, height = 6, units = 'in')
-
 # suggests a cluster of high correlation, low bias models
+
+ggsave("./CMIP6/figs/model_bias_vs_correlation.png", width = 8, height = 6, units = 'in')
+
+# finally, ar(1) values for ersst and models
+ff <- function(x) ar(x, order.max = 1)$ar
+
+historical.ar <- apply(historical.runs, 2, ff)
+ersst.ar <- ar(ersst, order.max = 1)$ar
+
+# plot difference from actual ar vs bias
+plot.ar.difference <- data.frame(name = str_remove(names(historical.ar), ".nc"),
+                                       ar.difference = abs(historical.ar - ersst.ar))
+
+bias.ar <- left_join(plot.bias, plot.ar.difference)
+
+ggplot(bias.ar, aes(bias, ar.difference, label = name)) +
+  geom_text()
+
+# suggest we weight models based on ar(1), bias, and correlation
+weights <- left_join(bias.ar, plot.correlation)
+
+# scale all three
+ff <- function(x) as.vector(scale(x))
+
+scaled.weights <- weights
+scaled.weights[,2:4] <- apply(scaled.weights[,2:4], 2, ff)
+
+# now change sign of weights - i.e., bias and ar.difference are better when low
+
+signed.weights <- scaled.weights %>% 
+  mutate(bias = -bias,
+         ar.difference = -ar.difference)
+
+# get scaling factor - set smallest value for each = 1
+
+ff <- function(x) 1 - min(x)
+  
+scaling.factor <- apply(signed.weights[,2:4], 2, ff)
+
+model.weights <- signed.weights
+
+for(i in 2:4){
+
+  model.weights[,i] <- model.weights[,i] + scaling.factor[(i-1)]
+
+}
+
+
+# evaluate weights squared
+model.weights[,2:4] <- model.weights[,2:4]^2
+
+model.weights$total <- apply(model.weights[,2:4], 1, sum)
+max(model.weights$total)/min(model.weights$total)
+
+plot.weights <- model.weights %>%
+  rename(model = name) %>%
+  pivot_longer(cols = -model)
+
+ggplot(plot.weights, aes(value)) +
+  geom_histogram(bins = 5, fill = "dark grey", color = "black") + 
+  facet_wrap(~name, scales = "free_x")
+
+# plot by model name
+plot.weights$model <- reorder(plot.weights$model, plot.weights$value)
+
+ggplot(plot.weights, aes(model, value)) +
+  geom_bar(stat = "identity", fill = "dark grey", color = "black") + 
+  facet_wrap(~name, scales = "free_y", ncol = 1) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+# this looks reasonable to me! 
+model.weights$total/min(model.weights$total)
+
+# seven models with weights > 4 times greater than worst model
+# so this will have the result of downweighting historically poor models
+# and treating the generally-similar models as a body
+
 # use this group, identify based on correlation
 # (r > 0.4), bias-correct, and plot against ERSST observations
 
