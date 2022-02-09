@@ -451,32 +451,26 @@ model.weights$total/min(model.weights$total)
 # so this will have the result of downweighting historically poor models
 # and treating the generally-similar models as a body
 
-# use this group, identify based on correlation
-# (r > 0.4), bias-correct, and plot against ERSST observations
 
-use <- as.vector(plot.correlation$name[plot.correlation$correlation > 0.4])
-
-# subset historical smooths with only the "use" models
-keep <- names(historical.smoothed) %in% use
-
+# select all the models
 best.model.smoothed <- as.data.frame(historical.smoothed)
 
 names(best.model.smoothed) <- str_remove(names(best.model.smoothed), ".nc")
 
-best.model.smoothed <- best.model.smoothed %>%
-  select(use)
-
-# subset bias with only the "use" Models
+# and for bias
 names(bias) <- str_remove(names(bias), ".nc")
 
-best.model.bias <- bias[names(bias) %in% use]
+best.model.bias <- bias
 
 # check that names line up
 identical(names(best.model.bias), names(best.model.smoothed)) # yes!
 
-# bias-correct smoothed time series for best models
+# bias-correct smoothed time series for best models -
+# subtract bias from each
 best.model.smoothed.bias.corrected <- best.model.smoothed - best.model.bias
 
+
+# and scale
 ff <- function(x) as.vector(scale(x))
 
 best.model.smoothed.anomaly <- apply(best.model.smoothed, 2, ff)
