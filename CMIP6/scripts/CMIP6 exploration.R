@@ -506,28 +506,15 @@ files <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/")
 # loop through each file, save the file name and experiment,
 # capture the time series of raw temps for area of interest for each file-experiment comparison
 
-files.use <- vector()
-
-use
-
-for(i in 1:length(use)){
-  
-  # i <- 1
-  pick <- grep(use[i], files)
-  
-  files.use <- c(files.use, files[pick])
-  
-}
-
 
 # objects for saving dates and temps and file-experiment ID from each realization
 piControl.temps <- hist.585.temps  <- matrix()
 
-for(i in 1:length(files.use)){
+for(i in 1:length(files)){
   
   # i <- 1
   
-  path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.use[i], sep="")
+  path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files[i], sep="")
   
   # load file
   nc <- nc_open(path)
@@ -544,7 +531,7 @@ for(i in 1:length(files.use)){
     # j <- 2
     if(ncvar_get(nc, "experiment", start = j, count = 1) == "hist_ssp585"){
       
-    temp <- data.frame(model = use[i],
+    temp <- data.frame(model =  files[i],
                        experiment = ncvar_get(nc, "experiment", start = j, count = 1))
     
 
@@ -573,7 +560,7 @@ for(i in 1:length(files.use)){
     SST[,drop] <- NA
     
     # plot to check 
-    png(paste("./CMIP6/figs/", files.use[i], "_hist_spatial_means_1850-1949.png", sep = ""), 6, 4.5, units = "in", res = 300)
+    png(paste("./CMIP6/figs/", files[i], "_hist_spatial_means_1850-1949.png", sep = ""), 6, 4.5, units = "in", res = 300)
     SST.mean <- colMeans(SST[yr < 1950,])
     z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
     image(x,y,z, col=new.col)
@@ -583,7 +570,7 @@ for(i in 1:length(files.use)){
     dev.off()
     
     these.temps <- data.frame(xx = rowMeans(SST, na.rm = T))
-    names(these.temps)<-  str_remove(files.use[i], ".nc")
+    names(these.temps)<-  str_remove(files[i], ".nc")
     
     hist.585.temps <- cbind(hist.585.temps, these.temps)
     
@@ -619,7 +606,7 @@ for(i in 1:length(files.use)){
       SST[,drop] <- NA
       
       # plot to check 
-      png(paste("./CMIP6/figs/", files.use[i], "_piControl_spatial_means.png", sep = ""), 6, 4.5, units = "in", res = 300)
+      png(paste("./CMIP6/figs/", files[i], "_piControl_spatial_means.png", sep = ""), 6, 4.5, units = "in", res = 300)
       SST.mean <- colMeans(SST)
       z <- t(matrix(SST.mean,length(y)))  # Re-shape to a matrix with latitudes in columns, longitudes in rows
       image(x,y,z, col=new.col)
@@ -630,7 +617,7 @@ for(i in 1:length(files.use)){
       
 
       these.temps <- data.frame(xx = rowMeans(SST, na.rm = T))
-      names(these.temps)<-  str_remove(files.use[i], ".nc")
+      names(these.temps)<-  str_remove(files[i], ".nc")
       
       piControl.temps <- cbind(piControl.temps, these.temps)
       
@@ -646,11 +633,8 @@ hist.585.temps <- hist.585.temps[,-1]
 # get annual means
 ff <- function(x) tapply(x, as.numeric(as.character(years((d)))), mean)
 
-
-
 hist.585.annual <- apply(hist.585.temps, 2, ff)
 piControl.annual <- apply(piControl.temps, 2, ff)
-
 
 
 
@@ -759,11 +743,16 @@ ggplot(warming.rate, aes(year, value, color = name)) +
 ggsave("./CMIP6/figs/n_pac_model_estimated_warming_rate.png", width = 7, height = 5, units = 'in')
 
 # save these values for future analysis
-write.csv(ne.pac.annual.plot, "./summaries/ne_pacific_annual_modeled_sst.csv")
-write.csv(ne.pac.ann.obs.sst, "./summaries/ne_pacific_annual_observed_sst.csv")
+write.csv(warming.rate, "./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv")
+write.csv(n.pac.obs.warming, "./CMIP6/summaries/ne_pacific_annual_observed_sst.csv")
 
+# need to 
+
+
+
+## below is old
 # calculate warming rate wrt preindustrial runs
-ne.pac.rate <- as.data.frame(ne.pac.annual) %>%
+ne.pac.rate <- as.data.frame(warming.rate) %>%
   mutate(year = 1900:2099) %>%
   filter(year %in% 1980:2014)
 
@@ -816,37 +805,9 @@ ggplot(best.model.annual.anomaly, aes(year, anomaly, color = model)) +
 
 ggsave("./figs/ersst_vs_best_bias_models_annual.png", width = 8, height = 5, units = 'in')
 
-# now calculate AR(1) and plot
 
-best.model.annual.anomaly <- best.model.annual.anomaly %>%
-  pivot_wider(names_from = model, values_from = anomaly)
 
-ar.comparison <- left_join(ersst.annual.anomaly, best.model.annual.anomaly) 
 
-names(ar.comparison)[2] <- "ERSSTv5"
-
-ar.out <- data.frame()
-
-for(i in 2:ncol(ar.comparison)) {
-  
-  mod <- ar(ar.comparison[,i], aic = F, order.max = 1)
-  
-  temp <- data.frame(name = names(ar.comparison)[i],
-                     ar = mod$ar)
-  
-  ar.out <- rbind(ar.out, temp)
-  
-}
-
-ar.out$name <- reorder(ar.out$name, ar.out$ar)
-
-ggplot(ar.out, aes(name, ar)) +
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.title.x = element_blank()) +
-  ggtitle("SST autocorrelation, 1900-2020") +
-  ylab("First-order autocorrelation")
-  
-ggsave("./figs/time_series_autocorrelation.png", width = 6, height = 4, units = 'in')
 
 
 ## now plot full time series for selected models under both SSPs, along with observations
