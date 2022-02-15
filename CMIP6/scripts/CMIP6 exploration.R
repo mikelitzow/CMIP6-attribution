@@ -910,7 +910,7 @@ for(i in 1:length(models)){
 }
 
 
-model.warming.evaluation # should use coefficients! (square root of difference from 1)
+model.warming.evaluation # should use coefficients! (inverse of difference from 1)
 
 model.warming.evaluation$coeff.from.one <- 1-model.warming.evaluation$coeff
 model.warming.evaluation$weight <- abs(1/model.warming.evaluation$coeff.from.one)
@@ -921,6 +921,10 @@ ggplot(model.warming.evaluation, aes(weight)) +
 
 ggplot(model.warming.evaluation, aes(abs(coeff.from.one), weight)) +
   geom_point()
+
+# save 
+write.csv(model.warming.evaluation, "./CMIP6/summaries/N_Pac_warming_model_weights.csv", row.names = F)
+
 
 # next, brms estimates of warming timing
 
