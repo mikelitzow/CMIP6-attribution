@@ -746,11 +746,126 @@ ggsave("./CMIP6/figs/n_pac_model_estimated_warming_rate.png", width = 7, height 
 write.csv(warming.rate, "./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv")
 write.csv(n.pac.obs.warming, "./CMIP6/summaries/ne_pacific_annual_observed_sst.csv")
 
-# need to 
+# need to:
+
+# 1) fit loess to full time series for each model and get estimated time
+# for 0.5, 1, 1.5, 2 degrees of warming wrt 1850-1949
+
+# 2) fit loess to ersst to calculate warming wrt 1854-1949 through 2021
+
+# 3) use differences between model and observed to weight each model
+
+# 4) fit Bayesian regression model to estimate overall warming event
+
+# 1) fit loess smoothers to save predicted values
+
+warming.rate <- warming.rate %>%
+  pivot_wider(names_from = name, values_from = value)
+warming.rate <- as.matrix(warming.rate)
+
+# create an object to catch
+n.pac.warming.timing <- warming.rate
+
+for(j in 2:ncol(warming.rate)){
+  
+  mod <- loess(warming.rate[,j] ~ warming.rate[,1])
+  n.pac.warming.timing[,j] <- predict(mod)
+  
+} 
+
+# plot to check
+check.plot <- as.data.frame(n.pac.warming.timing) %>%
+  pivot_longer(cols = -year)
+
+ggplot(check.plot, aes(year, value)) +
+  geom_line() + 
+  facet_wrap(~name) +
+  geom_hline(yintercept = c(0.5, 1, 1.5, 2), lty = 2, color = "red") +
+  coord_cartesian(xlim = c(2000,2050), ylim = c(0,4))
+
+# looks good!
+
+# get the year that each warming level is reached for each model
+levels <- c(0.5, 1, 1.5, 2)
+
+timing <- data.frame()
+n.pac.warming.timing <- as.data.frame(n.pac.warming.timing)
+
+for(j in 2:ncol(n.pac.warming.timing)){
+  # j <- 2
+  temp <- NA
+  
+  for(i in 1:length(levels)){
+    # i <- 1
+    
+    temp[i] <- min(n.pac.warming.timing$year[n.pac.warming.timing[,j] >= levels[i]])
+    
+  }
+  
+  timing <- rbind(timing,
+                  data.frame(
+                    model = colnames(n.pac.warming.timing[j]),
+                    level = levels,
+                    year = temp))
+}
+
+# and plot
+ggplot(timing, aes(year)) +
+  geom_histogram(bins = 6) +
+  facet_wrap(~level, scales = "free_x")
+
+ggplot(timing, aes(level, year, color = model)) +
+  geom_point() +
+  labs(x = "N. Pacific warming wrt 1850-1949 (°C)",
+       y = "Year first reached") +
+  scale_y_continuous(breaks = seq(1960, 2090, by = 10))
+
+timing$level <- as.factor(timing$level)
+
+obs.timing <- data.frame()
 
 
+# fit loess to ersst to get observed warming rate
+mod <- loess(n.pac.obs.warming[,2] ~ n.pac.obs.warming[,1])
+n.pac.obs.warming$trend <- predict(mod)
 
+# plot to check
+ggplot(n.pac.obs.warming, aes(year, trend)) +
+  geom_line()
+
+# looks right
+
+
+# now get observed timing of different warming levels - 
+# we've only reached 1, which is 0.5 
+
+  i <- 1
+  temp <- min(n.pac.obs.warming$year[n.pac.obs.warming$trend >= levels[i]]) 
+
+  obs.timing <- data.frame(level = levels,
+                           timing = c(2003, NA, NA, NA))
+  
+  # 2003
+obs.timing$level <- as.factor(obs.timing$level)
+
+ggplot(timing, aes(y = year, level)) +
+  geom_boxplot() +
+  labs(x = "N Pacific warming wrt 1850-1949 (°C)",
+       y = "Year first reached",
+       title = "Red dot = ERSSTv5 warming") +
+  geom_point(data = obs.timing, aes(y = timing, as.factor(level)), color = "red") 
+
+ggsave("./CMIP6/figs/ne_pacific_warming_rate_models_obs.png", width = 5, height = 4, units = 'in')
+
+# might be a good reason to extend back to 1854!
+
+# save timing
+write.csv(timing, "./summaries/model.ne.pacific.warming.timing.csv")
+
+#######################################
 ## below is old
+#######################################
+
 # calculate warming rate wrt preindustrial runs
 ne.pac.rate <- as.data.frame(warming.rate) %>%
   mutate(year = 1900:2099) %>%
@@ -1002,90 +1117,6 @@ ggplot(plot.warming, aes(year, value)) +
 ggsave("./figs/ne_pacific_warming_rate.png", width = 9, height = 6, units = 'in')
 
 
-# refit the loess smoothers to save predicted values
-year <- 1900:2099
-ne.pac.warming <- as.data.frame(ne.pac.warming)
-ne.pac.warming.timing <- ne.pac.warming
-
-for(j in 2:ncol(ne.pac.warming)){
-
-  mod <- loess(as.vector(ne.pac.warming[,j]) ~ year)
-  ne.pac.warming.timing[,j] <- predict(mod)
-  
-} 
-
-# plot to check
-check.plot <- ne.pac.warming.timing %>%
-  pivot_longer(cols = -year)
-
-ggplot(check.plot, aes(year, value)) +
-  geom_line() + 
-  facet_wrap(~name)
-
-# looks good!
-
-# get the year that each warming level is reached for each model
-levels <- c(0.5, 1, 1.5, 2, 2.5, 3)
-
-timing <- data.frame()
-
-for(j in 2:ncol(ne.pac.warming.timing)){
-  # j <- 2
-  temp <- NA
-  
-  for(i in 1:length(levels)){
-    # i <- 1
-    
-    temp[i] <- min(ne.pac.warming.timing$year[ne.pac.warming.timing[,j] >= levels[i]])
-    
-  }
-  
-  timing <- rbind(timing,
-                  data.frame(
-                  model = colnames(ne.pac.warming.timing[j]),
-                  level = levels,
-                  year = temp))
-}
-
-# and plot
-ggplot(timing, aes(year)) +
-  geom_histogram(bins = 6) +
-  facet_wrap(~level, scales = "free_x")
-
-ggplot(timing, aes(level, year, color = model)) +
-  geom_point() +
-  labs(x = "NE Pacific warming wrt 1900-1950 (°C)",
-       y = "Year first reached") +
-  scale_y_continuous(breaks = seq(1960, 2090, by = 10))
-
-timing$level <- as.factor(timing$level)
-
-obs.timing <- data.frame()
-
-for(i in 1:length(levels)){
-  
-  temp <- min(obs.warming$year[obs.warming$trend >= levels[i]]) 
-  obs.timing <- rbind(obs.timing,
-                      data.frame(level = levels[i],
-                                 timing = temp))
-}
-
-obs.timing$level <- as.factor(obs.timing$level)
-
-ggplot(timing, aes(y = year, level)) +
-  geom_boxplot() +
-  labs(x = "NE Pacific warming wrt 1900-1950 (°C)",
-       y = "Year first reached",
-       title = "Red dots = ERSSTv5 warming") +
-  geom_point(data = obs.timing, aes(level, timing), color = "red") +
-  scale_y_continuous(breaks = seq(1930, 2090, by = 10)) 
-
-ggsave("./figs/ne_pacific_warming_rate_models_obs.png", width = 5, height = 4, units = 'in')
-
-# might be a good reason to extend back to 1854!
-
-# save timing
-write.csv(timing, "./summaries/model.ne.pacific.warming.timing.csv")
 
 
 ### following is old, can be transferred to separate FAR script
