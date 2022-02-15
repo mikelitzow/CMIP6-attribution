@@ -925,6 +925,7 @@ ggplot(model.warming.evaluation, aes(abs(coeff.from.one), weight)) +
 # save 
 write.csv(model.warming.evaluation, "./CMIP6/summaries/N_Pac_warming_model_weights.csv", row.names = F)
 
+write.csv(n.pac.warming.timing,  "./CMIP6/summaries/N_Pac_warming_model_trends.csv", row.names = F)
 
 # next, brms estimates of warming timing
 
