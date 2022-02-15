@@ -919,6 +919,12 @@ ggplot(model.warming.evaluation, aes(weight)) +
   geom_histogram(bins = 8, fill = "grey", color = "black") # seems right!
 
 
+ggplot(model.warming.evaluation, aes(abs(coeff.from.one), weight)) +
+  geom_point()
+
+# next, brms estimates of warming timing
+
+
 #######################################
 ## below is old
 #######################################
