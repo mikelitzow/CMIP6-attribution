@@ -846,6 +846,10 @@ ggplot(n.pac.obs.warming, aes(year, trend)) +
                            timing = c(2003, NA, NA, NA))
   
   # 2003
+  
+  
+  
+  
 obs.timing$level <- as.factor(obs.timing$level)
 
 ggplot(timing, aes(y = year, level)) +
@@ -857,10 +861,63 @@ ggplot(timing, aes(y = year, level)) +
 
 ggsave("./CMIP6/figs/ne_pacific_warming_rate_models_obs.png", width = 5, height = 4, units = 'in')
 
-# might be a good reason to extend back to 1854!
+
 
 # save timing
-write.csv(timing, "./summaries/model.ne.pacific.warming.timing.csv")
+write.csv(timing, "./CMIP6/summaries/model.ne.pacific.warming.timing.csv")
+
+
+# evaluate ability of different models to predict warming for 1950-2021
+
+predict.timing <- n.pac.warming.timing %>%
+ filter(year %in% 1972:2021) %>%
+  pivot_longer(cols = -year)
+
+response.timing <- n.pac.obs.warming %>%
+  filter(year %in% 1972:2021) %>%
+  select(year, trend) %>%
+  rename(ersst = trend)
+
+predict.timing <- left_join(predict.timing, response.timing)
+
+# plot to check
+ggplot(predict.timing, aes(value, ersst)) +
+  geom_point() +
+  facet_wrap(~name) # avoids a 'fishook' around declining rate of 1950s
+
+model.warming.evaluation <- data.frame()
+
+models <- unique(predict.timing$name)
+
+for(i in 1:length(models)){
+  
+  # i <- 1
+  
+  temp <- predict.timing %>%
+    filter(name == models[i])
+  
+  linear.fit <- lm(ersst ~ value, data = temp)
+  
+  RSS <- c(crossprod(linear.fit$residuals))
+  Pearson.resid <- RSS / linear.fit$df.residual
+  
+  
+  model.warming.evaluation <- rbind(model.warming.evaluation,
+                                    data.frame(model = models[i],
+                                               coeff = coefficients(linear.fit)[2],
+                                               Pearson.resid = Pearson.resid))
+  
+}
+
+
+model.warming.evaluation # should use coefficients! (square root of difference from 1)
+
+model.warming.evaluation$coeff.from.one <- 1-model.warming.evaluation$coeff
+model.warming.evaluation$weight <- abs(1/model.warming.evaluation$coeff.from.one)
+
+ggplot(model.warming.evaluation, aes(weight)) +
+  geom_histogram(bins = 8, fill = "grey", color = "black") # seems right!
+
 
 #######################################
 ## below is old
