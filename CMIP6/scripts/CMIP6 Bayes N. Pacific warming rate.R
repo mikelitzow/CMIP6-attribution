@@ -2,7 +2,6 @@
 ## weighting models by their performance wrt 1972-2021 observed warming rate
 
 library(tidyverse)
-library(mgcv)
 library(rstan)
 library(brms)
 library(bayesplot)
