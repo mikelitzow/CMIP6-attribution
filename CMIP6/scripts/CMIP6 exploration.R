@@ -528,7 +528,7 @@ for(i in 1:length(files)){
   
   for(j in 1:length(experiments)){
     
-    # j <- 2
+    # j <- 1
     if(ncvar_get(nc, "experiment", start = j, count = 1) == "hist_ssp585"){
       
     temp <- data.frame(model =  files[i],
@@ -553,6 +553,7 @@ for(i in 1:length(files)){
     
     # Change to matrix with column for each grid point, rows for monthly means
     SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3])) 
+    dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
     
     # remove  values south of 20N
     drop <- lat < 20
@@ -587,11 +588,11 @@ for(i in 1:length(files)){
       # Keep track of corresponding latitudes and longitudes of each column:
       lat <- rep(y, length(x))   
       lon <- rep(x, each = length(y))   
-      dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
+
       
       
       SST <- ncvar_get(nc, "tos", verbose = F, start = c(j,1,1,1), count = c(1,-1,-1,-1))
-      
+    
       
       # Change data from a 3-D array to a matrix of monthly data by grid point:
       # First, reverse order of dimensions ("transpose" array)
@@ -599,6 +600,7 @@ for(i in 1:length(files)){
       
       # Change to matrix with column for each grid point, rows for monthly means
       SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3])) 
+      dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
       
       # remove  values south of 20N
       drop <- lat < 20
@@ -736,7 +738,7 @@ warming.rate <- as.data.frame(warming.rate) %>%
 ggplot(warming.rate, aes(year, value, color = name)) +
   geom_line() +
   geom_line(data = n.pac.obs.warming, aes(year, ersst.warming), color = "black", lwd = 1) +
-  ggtitle("Annual SST 1900-2099 (ERSST observations in black)") +
+  ggtitle("Annual SST 1850-2099 (ERSST observations in black)") +
   ylab("SST (°C)") +
   theme(axis.title.x = element_blank())
 
@@ -820,6 +822,8 @@ ggplot(timing, aes(level, year, color = model)) +
        y = "Year first reached") +
   scale_y_continuous(breaks = seq(1960, 2090, by = 10))
 
+ggsave("./CMIP6/figs/N_Pac_warming_rate_by_model.png", width = 6, height = 4, units = 'in')
+
 timing$level <- as.factor(timing$level)
 
 obs.timing <- data.frame()
@@ -846,8 +850,6 @@ ggplot(n.pac.obs.warming, aes(year, trend)) +
                            timing = c(2003, NA, NA, NA))
   
   # 2003
-  
-  
   
   
 obs.timing$level <- as.factor(obs.timing$level)
