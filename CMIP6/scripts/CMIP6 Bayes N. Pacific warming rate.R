@@ -11,25 +11,21 @@ source("./CMIP6/scripts/stan_utils.R")
 theme_set(theme_bw())
 
 ## load model warming wrt 1850-1949 from historical/ssp585 runs --------
-model.warming <- read.csv("./CMIP6/summaries/N_Pac_warming_model_trends.csv")
+model.warming.rate <- read.csv("./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv", row.names = 1)
 
+# load model weights
 model.weights <- read.csv("./CMIP6/summaries/N_Pac_warming_model_weights.csv")
 
 # wrangle data
 
 # simplify weights
-weights <- model.weights %>%
+weights <- model.weights  %>%
   mutate(model_fac = as.factor(model)) %>%
   select(model_fac, weight)
 
-# clean up model names in model.warming
-names(model.warming) <- str_replace_all(names(model.warming), "\\.", "-")
-
-dat <- model.warming %>%
-  pivot_longer(cols = -year) %>%
-  mutate(year_fac = as.factor(year),
-         model_fac = as.factor(name)) %>%
-  select(-year, -name) %>%
+dat <- model.warming.rate %>%
+  mutate(model_fac = as.factor(name)) %>%
+  select(-name) %>%
   rename(warming = value) 
 
 levels(weights$model_fac); levels(dat$model_fac)
@@ -41,32 +37,33 @@ sum(is.na(dat))
 
 ## run brms ---------------------------------
 
-warming_formula <-  bf(warming | weights(weight) ~ year_fac + (1 | model_fac))
+warming_formula <-  bf(warming | weights(weight) ~ s(year) + (1 | model_fac))
 
 ## Show default priors
 get_prior(warming_formula, dat)
 
 warming_brm <- brm(warming_formula,
                     data = dat,
-                    cores = 4, chains = 4, iter = 3000,
+                    cores = 4, chains = 4, iter = 4000,
                     save_pars = save_pars(all = TRUE),
-                    control = list(adapt_delta = 0.99, max_treedepth = 10))
+                    control = list(adapt_delta = 0.99, max_treedepth = 12))
 
-saveRDS(warming_brm, file = "./CMIP6/brms_output/codR_dfa_brm.rds")
+saveRDS(warming_brm, file = "./CMIP6/brms_output/warming_brm.rds")
 
-codR_dfa_brm <- readRDS("./output/codR_dfa_brm.rds")
-check_hmc_diagnostics(codR_dfa_brm$fit)
-neff_lowest(codR_dfa_brm$fit)
-rhat_highest(codR_dfa_brm$fit)
-summary(codR_dfa_brm)
-bayes_R2(codR_dfa_brm)
-plot(codR_dfa_brm$criteria$loo, "k")
-plot(conditional_effects(codR_dfa_brm), ask = FALSE)
+warming_brm <- readRDS("./CMIP6/brms_output/warming_brm.rds")
+
+check_hmc_diagnostics(warming_brm$fit)
+neff_lowest(warming_brm$fit) # ??
+rhat_highest(warming_brm$fit)
+summary(warming_brm)
+bayes_R2(warming_brm)
+plot(warming_brm$criteria$loo, "k")
+plot(conditional_effects(warming_brm), ask = FALSE)
 y <- dfa$model
-yrep_codR_dfa_brm  <- fitted(codR_dfa_brm, scale = "response", summary = FALSE)
-ppc_dens_overlay(y = y, yrep = yrep_codR_dfa_brm[sample(nrow(yrep_codR_dfa_brm), 25), ]) +
+yrep_warming_brm  <- fitted(warming_brm, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_warming_brm[sample(nrow(yrep_warming_brm), 25), ]) +
   xlim(-6, 6) +
-  ggtitle("codR_dfa_brm")
-pdf("./figs/trace_codR_dfa_brm.pdf", width = 6, height = 4)
-trace_plot(codR_dfa_brm$fit)
+  ggtitle("warming_brm")
+pdf("./figs/trace_warming_brm.pdf", width = 6, height = 4)
+trace_plot(warming_brm$fit)
 dev.off()
