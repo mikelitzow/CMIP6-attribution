@@ -86,6 +86,7 @@ for(i in 1:length(files.new)){
   # extract dates
 
   d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
+
   
   this.name <- paste(files.new[i], ncvar_get(nc, "experiment", start = j, count = 1), sep = "_")
 
@@ -156,6 +157,13 @@ for(i in 1:length(files.new)){
 View(dates)
 
 # just checked visually, but yes, they appear to be!
+
+# save for other analyses
+saver <- as.data.frame(temps) %>%
+  mutate(date = d) %>%
+  select(-temps)
+
+write.csv(saver, "./CMIP6/summaries/GOA_monthly_sst_piControl_hist585.csv", row.names = F)
 
 
 ## load and process ERSSTv5 observations ----------------------------------
@@ -377,10 +385,10 @@ ggplot(bias.corr, aes(bias, correlation, label = name)) +
 ggsave("./CMIP6/figs/model_bias_vs_correlation.png", width = 8, height = 6, units = 'in')
 
 # finally, ar(1) values for ersst and models
-ff <- function(x) ar(x, order.max = 1)$ar
+ff <- function(x) stats::ar(x, order.max = 1)$ar
 
 historical.ar <- apply(historical.runs, 2, ff)
-ersst.ar <- ar(ersst, order.max = 1)$ar
+ersst.ar <- stats::ar(ersst, order.max = 1)$ar
 
 # plot difference from actual ar vs bias
 plot.ar.difference <- data.frame(name = str_remove(names(historical.ar), ".nc"),
@@ -450,6 +458,9 @@ model.weights$total/min(model.weights$total)
 # seven models with weights > 4 times greater than worst model
 # so this will have the result of downweighting historically poor models
 # and treating the generally-similar models as a body
+
+# save
+write.csv(model.weights, "./CMIP6/summaries/GOA_model_weights_bias_corr_ar1.csv")
 
 
 # select all the models
