@@ -267,8 +267,8 @@ ggplot(warming.rate, aes(year, value, color = name)) +
 ggsave("./CMIP6/figs/n_pac_model_estimated_warming_rate.png", width = 7, height = 5, units = 'in')
 
 # save these values for future analysis
-write.csv(warming.rate, "./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv")
-write.csv(n.pac.obs.warming, "./CMIP6/summaries/ne_pacific_annual_observed_sst.csv")
+write.csv(warming.rate, "./CMIP6/summaries/north_pacific_annual_modeled_sst.csv")
+write.csv(n.pac.obs.warming, "./CMIP6/summaries/north_pacific_annual_observed_sst.csv")
 
 # need to:
 
