@@ -281,7 +281,6 @@ write.csv(n.pac.obs.warming, "./CMIP6/summaries/north_pacific_annual_observed_ss
 
 # 4) fit Bayesian regression model to estimate overall warming event
 
-
 warming.rate <- warming.rate %>%
   pivot_wider(names_from = name, values_from = value)
 warming.rate <- as.matrix(warming.rate)
@@ -387,7 +386,7 @@ ggsave("./CMIP6/figs/ne_pacific_warming_rate_models_obs.png", width = 5, height 
 
 
 # save timing
-write.csv(timing, "./CMIP6/summaries/model.ne.pacific.warming.timing.csv")
+write.csv(timing, "./CMIP6/summaries/model.north.pacific.warming.timing.csv")
 
 
 # evaluate ability of different models to predict warming for 1950-2021
