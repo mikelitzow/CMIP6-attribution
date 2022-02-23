@@ -201,7 +201,88 @@ for(i in 1:length(models)){
 # Calculate probability at 0.5, 1.0, 1.5, 2.0 warming from hist.585
 
 # load warming timing for each model
-timing <- read.csv("./CMIP6/summaries/")
+timing <- read.csv("./CMIP6/summaries/model.north.pacific.warming.timing.csv", row.names = 1)
+
+# fix model names to match timing
+hist_ssp585$model <- str_replace_all(hist_ssp585$model, "\\.", "-")
+
+# calculate 2-yr and 3-yr rolling means
+hist_ssp585$two.yr.mean <- zoo::rollmean(hist_ssp585$goa.sst, 2, fill = NA, align = "right")
+hist_ssp585$three.yr.mean <- zoo::rollmean(hist_ssp585$goa.sst, 3, fill = NA, align = "center")
+
+# get vector of model names
+models <- unique(hist_ssp585$model)
+
+# check that these match with model names from timing
+identical(models, unique(timing$model)) # hot dog
+
+hist_ssp585_prob <- data.frame()
+
+# warming levels
+levels <- seq(0.5, 2, by = 0.5)
+
+# make an object to save probabilites
+warming.level.prob.temp.1yr <- warming.level.prob.temp.2yr <- warming.level.prob.temp.3yr <- NA
+
+# loop through each model
+for(i in 1:length(models)){
+  # i <- 1
+  
+  # separate model of interest
+  hist.temp <- hist_ssp585 %>% 
+    dplyr::filter(model == models[i])
+  
+  # pull warming years
+  temp <- NA
+  
+  for(j in 1:length(levels)){
+  j <- 1
+  temp <- timing %>%
+    filter(model == models[i],
+           level == levels[j])
+  
+  # pull out year warming level is reached, and following 9 years
+  hist.temp <- hist.temp %>%
+    filter(year %in% temp$year:(temp$year + 9))
+    
+  for(k in 1:nrow(obs.sst)){
+    # k <- 1
+    
+    # calculate prob for annual, 2-yr, and 3-yr
+    warming.level.prob.temp.1yr[j] <- sum(hist.temp$goa.sst >= obs.sst$sc.sst[k])/length(hist.temp$goa.sst)
+    
+    warming.level.prob.temp.2yr[j] <- sum(hist.temp$two.yr.mean >= obs.sst$sc.sst[k])/length(hist.temp$goa.sst)
+    
+    preind.1[j] <- sum(pre.temp$goa.sst >= obs.sst$sc.sst[j])/length(pre.temp$goa.sst)
+    
+    preind.2[j] <- sum(pre.temp$two.yr.mean >= obs.sst$sc.sst2[j], na.rm = T)/length(pre.temp$two.yr.mean)
+    
+    preind.3[j] <- sum(pre.temp$three.yr.mean >= obs.sst$sc.sst3[j], na.rm = T)/length(pre.temp$three.yr.mean)
+    
+  }
+  
+  # add to df
+  preindustrial.prob <- rbind(preindustrial.prob,
+                              data.frame(model = models[i],
+                                         prob.1yr = preind.1,
+                                         prob.2yr = preind.2,
+                                         prob.3yr = preind.3))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ggplot(observed.FAR, aes(year, FAR.3, color = model)) +
   geom_line()
