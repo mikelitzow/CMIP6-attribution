@@ -171,11 +171,11 @@ ggplot(plot.dat, aes(year, goa.sst, color = run)) +
 ggsave("./CMIP6/figs/hist585_vs_preindustrial_anomalies_wrt_1950-1999.png", width = 9, height = 7, units = 'in')
 
 ## STEP 3 ---------------------------------------------
-# calculate preindustrial probability
+# Calculate FAR for each anomaly in the observed time series, 
+# for each model using years between warming = 0.5 and warming = 1.0 as present
 
 # get vector of model names
 models <- unique(preindustrial$model)
-
 preindustrial.prob <- data.frame()
 
 # loop through each model
@@ -190,22 +190,22 @@ for(i in 1:length(models)){
   pre.temp$two.yr.mean <- zoo::rollmean(pre.temp$goa.sst, 2, fill = NA, align = "right")
   pre.temp$three.yr.mean <- zoo::rollmean(pre.temp$goa.sst, 3, fill = NA, align = "center") # again - year before, year of, year after
   
-  # set up temporary objects to catch probability
+  # set up temporary objects to catch probability and save relevant anomaly
   preind.1 <- preind.2 <- preind.3 <- preind.anom.1 <- preind.anom.2 <- preind.anom.3 <- NA
   
-  for(j in 1:nrow(pre.temp)){
+  for(j in 1:nrow(obs.sst)){
     # j <- 1
     
-    # record anomaly and calculate prob for annual, 2-yr, and 3-yr
-    preind.anom.1[j] <- pre.temp$goa.sst[j]
-    preind.1[j] <- sum(pre.temp$goa.sst >= pre.temp$goa.sst[j])/length(pre.temp$goa.sst)
+    # calculate prob for annual, 2-yr, and 3-yr
     
-    preind.anom.2[j] <- pre.temp$two.yr.mean[j] 
-    ifelse(is.na(preind.anom.2[j]), preind.2[j] <- NA, preind.2[j] <- sum(pre.temp$two.yr.mean >= pre.temp$two.yr.mean[j], na.rm = T)/length(na.omit(pre.temp$two.yr.mean)))
+    preind.anom.1[j] <- obs.sst$sc.sst[j]
+    preind.1[j] <- sum(pre.temp$goa.sst >= obs.sst$sc.sst[j])/length(pre.temp$goa.sst)
     
-    preind.anom.3[j] <- pre.temp$three.yr.mean[j]
-    ifelse(is.na(preind.anom.3[j]), preind.3[j] <- NA, preind.3[j] <- sum(pre.temp$three.yr.mean >= pre.temp$three.yr.mean[j], na.rm = T)/length(na.omit(pre.temp$three.yr.mean)))
+    preind.anom.2[j] <- obs.sst$sc.sst2[j] 
+    ifelse(is.na(preind.anom.2[j]), preind.2[j] <- NA, preind.2[j] <- sum(pre.temp$two.yr.mean >= obs.sst$sc.sst2[j], na.rm = T)/length(na.omit(pre.temp$two.yr.mean)))
     
+    preind.anom.3[j] <- obs.sst$sc.sst3[j]
+    ifelse(is.na(preind.anom.3[j]), preind.3[j] <- NA, preind.3[j] <- sum(pre.temp$three.yr.mean >= obs.sst$sc.sst3[j], na.rm = T)/length(na.omit(pre.temp$three.yr.mean)))
     
   }
   
@@ -219,6 +219,8 @@ for(i in 1:length(models)){
                                          anomaly.3yr = preind.anom.3,
                                          prob.3yr = preind.3))
 }
+
+
 
 ## STEP 4 -------------------------------------
 # Calculate probability at 0.5, 1.0, 1.5, 2.0 warming from hist.585
@@ -245,7 +247,8 @@ hist_ssp585_prob <- data.frame()
 levels <- seq(0.5, 2, by = 0.5)
 
 # make an object to save probabilites
-warming.level.prob.temp.1yr <- warming.level.prob.temp.2yr <- warming.level.prob.temp.3yr <- NA
+warming.level.prob.temp.1yr <- warming.level.prob.temp.2yr <- warming.level.prob.temp.3yr <- 
+  warming.anom.1 <- warming.anom.2 <- warming.anom.3 <- NA
 
 # loop through each model
 for(i in 1:length(models)){
@@ -268,15 +271,30 @@ for(i in 1:length(models)){
   hist.temp <- hist.temp %>%
     filter(year %in% temp$year:(temp$year + 9))
     
-  for(k in 1:nrow(obs.sst)){
+  for(k in 1:nrow(hist.temp)){
     # k <- 1
     
     # calculate prob for annual, 2-yr, and 3-yr
+    warming.anom.1[k] <- hist.temp$goa.sst[k]
     warming.level.prob.temp.1yr[j] <- sum(hist.temp$goa.sst >= obs.sst$sc.sst[k])/length(hist.temp$goa.sst)
     
     warming.level.prob.temp.2yr[j] <- if_else(is.na() sum(hist.temp$two.yr.mean >= obs.sst$sc.sst2[k], na.rm = T)/length(na.omit(hist.temp$two.yr.mean))
     
     warming.level.prob.temp.3yr[j] <- sum(hist.temp$three.yr.mean >= obs.sst$sc.sst3[k], na.rm = T)/length(na.omit(hist.temp$three.yr.mean))
+    
+    ##
+    # record anomaly and calculate prob for annual, 2-yr, and 3-yr
+    preind.anom.1[j] <- pre.temp$goa.sst[j]
+    preind.1[j] <- sum(pre.temp$goa.sst >= pre.temp$goa.sst[j])/length(pre.temp$goa.sst)
+    
+    preind.anom.2[j] <- pre.temp$two.yr.mean[j] 
+    ifelse(is.na(preind.anom.2[j]), preind.2[j] <- NA, preind.2[j] <- sum(pre.temp$two.yr.mean >= pre.temp$two.yr.mean[j], na.rm = T)/length(na.omit(pre.temp$two.yr.mean)))
+    
+    preind.anom.3[j] <- pre.temp$three.yr.mean[j]
+    ifelse(is.na(preind.anom.3[j]), preind.3[j] <- NA, preind.3[j] <- sum(pre.temp$three.yr.mean >= pre.temp$three.yr.mean[j], na.rm = T)/length(na.omit(pre.temp$three.yr.mean)))
+    
+    
+    
     
   }
   
