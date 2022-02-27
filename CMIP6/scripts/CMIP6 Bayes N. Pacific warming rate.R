@@ -44,9 +44,9 @@ get_prior(warming_formula, dat)
 
 warming_brm <- brm(warming_formula,
                     data = dat,
-                    cores = 4, chains = 4, iter = 4000,
+                    cores = 4, chains = 4, iter = 5000,
                     save_pars = save_pars(all = TRUE),
-                    control = list(adapt_delta = 0.99, max_treedepth = 12))
+                    control = list(adapt_delta = 0.99, max_treedepth = 16))
 
 saveRDS(warming_brm, file = "./CMIP6/brms_output/warming_brm.rds")
 
@@ -59,7 +59,7 @@ summary(warming_brm)
 bayes_R2(warming_brm)
 plot(warming_brm$criteria$loo, "k")
 plot(conditional_effects(warming_brm), ask = FALSE)
-y <- dfa$model
+y <- dat$warming
 yrep_warming_brm  <- fitted(warming_brm, scale = "response", summary = FALSE)
 ppc_dens_overlay(y = y, yrep = yrep_warming_brm[sample(nrow(yrep_warming_brm), 25), ]) +
   xlim(-6, 6) +
