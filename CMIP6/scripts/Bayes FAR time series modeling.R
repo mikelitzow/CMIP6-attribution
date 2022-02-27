@@ -419,8 +419,76 @@ ggplot(dat_ce) +
 ggsave("./CMIP6/figs/far_1yr_base.png", width = 6, height = 4)
 
 
+## second model - base model + ar() term -----------------------
+
+## Define model formula
+far_ar_formula <-  bf(FAR.1yr | resp_weights(weight) + trunc(ub = 1) ~
+                        s(anomaly.1yr, k = 5) + (1 | model_fac) + ar(gr = model_fac)) 
+
+# autocorrelation modeled within each CMIP6 model 
+
+## base model - Gaussian distribution truncated at one, each observation weighted by scaled model weight
+far_1yr_ar <- brm(far_ar_formula,
+                    data = FAR,
+                    cores = 4, chains = 4, iter = 6000,
+                    save_pars = save_pars(all = TRUE),
+                    control = list(adapt_delta = 0.99, max_treedepth = 16))
+
+saveRDS(far_1yr_ar, file = "./CMIP6/brms_output/far_1yr_ar.rds")
+
+far_1yr_ar  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
+saveRDS(far_1yr_ar, file = "./CMIP6/brms_output/far_1yr_ar.rds")
+
+far_1yr_ar <- readRDS("./CMIP6/brms_output/far_1yr_ar.rds")
+
+check_hmc_diagnostics(far_1yr_ar$fit)
+neff_lowest(far_1yr_ar$fit)
+rhat_highest(far_1yr_ar$fit)
+summary(far_1yr_ar)
+bayes_R2(far_1yr_ar)
+
+y <- as.vector(na.omit(FAR$FAR.1yr)) # this does not account for weights - need to check that
+yrep_far_1yr_ar  <- fitted(far_1yr_ar, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_far_1yr_ar[sample(nrow(yrep_far_1yr_ar), 25), ]) +
+  ggtitle("far_1yr_ar.3")
+
+## Base model predicted effects ---------------------------------------
+
+## SST anomaly predictions #### 95% CI
+ce1s_1 <- conditional_effects(far_1yr_ar, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.025, 0.975))
+## 90% CI
+ce1s_2 <- conditional_effects(far_1yr_ar, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.05, 0.95))
+## 80% CI
+ce1s_3 <- conditional_effects(far_1yr_ar, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.1, 0.9))
+dat_ce <- ce1s_1$anomaly.1yr
+dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
+dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
+dat_ce[["upper_90"]] <- ce1s_2$anomaly.1yr[["upper__"]]
+dat_ce[["lower_90"]] <- ce1s_2$anomaly.1yr[["lower__"]]
+dat_ce[["upper_80"]] <- ce1s_3$anomaly.1yr[["upper__"]]
+dat_ce[["lower_80"]] <- ce1s_3$anomaly.1yr[["lower__"]]
+
+ggplot(dat_ce) +
+  aes(x = effect1__, y = estimate__) +
+  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+  geom_line(size = 1, color = "red3") +
+  labs(y = "Fraction of attributable risk", x = "SST anomaly") +
+  theme_bw()
 
 
+ggsave("./CMIP6/figs/far_1yr_ar.png", width = 6, height = 4)
+
+
+## model comparison
+loo(far_1yr_base, far_1yr_ar)
+
+###################
+###################
 
 ## 95% CI
 ce1s_1 <- conditional_effects(far_1yr_base, probs = c(0.025, 0.975))
