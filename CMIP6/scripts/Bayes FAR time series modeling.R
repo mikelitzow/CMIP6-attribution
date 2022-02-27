@@ -357,7 +357,7 @@ FAR$model_fac <- as.factor(FAR$model)
 # 
 
 ## Define model formula
-far_formula <-  bf(FAR.1yr | resp_weights(weight) + trunc(ub = 1) ~ s(anomaly.1yr) + (1 | model_fac))
+far_formula <-  bf(FAR.1yr | resp_weights(weight) + trunc(ub = 1) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
 
 
 ## fit: brms --------------------------------------
@@ -365,9 +365,9 @@ far_formula <-  bf(FAR.1yr | resp_weights(weight) + trunc(ub = 1) ~ s(anomaly.1y
 ## base model - Gaussian distribution truncated at one, each observation weighted by scaled model weight
 far_1yr_base <- brm(far_formula,
                      data = FAR,
-                     cores = 4, chains = 4, iter = 3000,
+                     cores = 4, chains = 4, iter = 6000,
                      save_pars = save_pars(all = TRUE),
-                     control = list(adapt_delta = 0.999, max_treedepth = 14))
+                     control = list(adapt_delta = 0.99, max_treedepth = 16))
 
 saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
@@ -401,12 +401,10 @@ ce1s_3 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula =
 dat_ce <- ce1s_1$anomaly.1yr
 dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
 dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
-dat_ce[["upper_90"]] <- ce1s_2$far[["upper__"]]
-dat_ce[["lower_90"]] <- ce1s_2$far[["lower__"]]
-dat_ce[["upper_80"]] <- ce1s_3$far[["upper__"]]
-dat_ce[["lower_80"]] <- ce1s_3$far[["lower__"]]
-dat_ce[["rug.anom"]] <- c(jitter(unique(data$far), amount = 0.01),
-                          rep(NA, 100-length(unique(data$far))))
+dat_ce[["upper_90"]] <- ce1s_2$anomaly.1yr[["upper__"]]
+dat_ce[["lower_90"]] <- ce1s_2$anomaly.1yr[["lower__"]]
+dat_ce[["upper_80"]] <- ce1s_3$anomaly.1yr[["upper__"]]
+dat_ce[["lower_80"]] <- ce1s_3$anomaly.1yr[["lower__"]]
 
 ggplot(dat_ce) +
   aes(x = effect1__, y = estimate__) +
@@ -414,12 +412,11 @@ ggplot(dat_ce) +
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
   geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
   geom_line(size = 1, color = "red3") +
-  labs(x = "FAR: three-year running mean SST", y = "Age diversity") +
-  theme_bw()+
-  geom_rug(aes(x=rug.anom, y=NULL))
+  labs(y = "Fraction of attributable risk", x = "SST anomaly") +
+  theme_bw()
 
 
-ggsave("./pollock_age_diversity/figs/three.yr_sst_predicted_age_diversity.png", width = 6, height = 4)
+ggsave("./CMIP6/figs/far_1yr_base.png", width = 6, height = 4)
 
 
 
