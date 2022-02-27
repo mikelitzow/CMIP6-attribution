@@ -1,5 +1,4 @@
-## Cod FAR
-## model the FAR time series to account for model error
+## Bayesian models to estimate GOA FAR
 
 library(rstan)
 library(brms)
