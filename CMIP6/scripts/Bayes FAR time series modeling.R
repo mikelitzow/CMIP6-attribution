@@ -353,10 +353,8 @@ hist(FAR$FAR.1yr, breaks = 50)
 # setup variables - model as factor
 FAR$model_fac <- as.factor(FAR$model)
 
-# 
-
 ## Define model formula
-far_formula <-  bf(FAR.1yr | resp_weights(weight) + trunc(ub = 1) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
+far_formula <-  bf(FAR.1yr | resp_weights(weight) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
 
 
 ## fit: brms --------------------------------------
@@ -366,11 +364,11 @@ far_1yr_base <- brm(far_formula,
                      data = FAR,
                      cores = 4, chains = 4, iter = 6000,
                      save_pars = save_pars(all = TRUE),
-                     control = list(adapt_delta = 0.99, max_treedepth = 16))
+                     control = list(adapt_delta = 0.999, max_treedepth = 16))
 
 saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
-far_1yr_base  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
+# far_1yr_base  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
 saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
 far_1yr_base <- readRDS("./CMIP6/brms_output/far_1yr_base.rds")
@@ -379,7 +377,9 @@ check_hmc_diagnostics(far_1yr_base$fit)
 neff_lowest(far_1yr_base$fit)
 rhat_highest(far_1yr_base$fit)
 summary(far_1yr_base)
-bayes_R2(far_1yr_base)
+# bayes_R2(far_1yr_base)
+
+plot(conditional_smooths(far_1yr_base), ask = FALSE)
 
 y <- as.vector(na.omit(FAR$FAR.1yr)) # this does not account for weights - need to check that
 yrep_far_1yr_base  <- fitted(far_1yr_base, scale = "response", summary = FALSE)
@@ -421,7 +421,7 @@ ggsave("./CMIP6/figs/far_1yr_base.png", width = 6, height = 4)
 ## second model - base model + ar() term -----------------------
 
 ## Define model formula
-far_ar_formula <-  bf(FAR.1yr | resp_weights(weight) + trunc(ub = 1) ~
+far_ar_formula <-  bf(FAR.1yr | resp_weights(weight) ~
                         s(anomaly.1yr, k = 5) + (1 | model_fac) + ar(gr = model_fac)) 
 
 # autocorrelation modeled within each CMIP6 model 
@@ -431,11 +431,11 @@ far_1yr_ar <- brm(far_ar_formula,
                     data = FAR,
                     cores = 4, chains = 4, iter = 6000,
                     save_pars = save_pars(all = TRUE),
-                    control = list(adapt_delta = 0.99, max_treedepth = 16))
+                    control = list(adapt_delta = 0.999, max_treedepth = 16))
 
 saveRDS(far_1yr_ar, file = "./CMIP6/brms_output/far_1yr_ar.rds")
 
-far_1yr_ar  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
+# far_1yr_ar  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
 saveRDS(far_1yr_ar, file = "./CMIP6/brms_output/far_1yr_ar.rds")
 
 far_1yr_ar <- readRDS("./CMIP6/brms_output/far_1yr_ar.rds")
@@ -444,14 +444,14 @@ check_hmc_diagnostics(far_1yr_ar$fit)
 neff_lowest(far_1yr_ar$fit)
 rhat_highest(far_1yr_ar$fit)
 summary(far_1yr_ar)
-bayes_R2(far_1yr_ar)
+# bayes_R2(far_1yr_ar)
 
 y <- as.vector(na.omit(FAR$FAR.1yr)) # this does not account for weights - need to check that
 yrep_far_1yr_ar  <- fitted(far_1yr_ar, scale = "response", summary = FALSE)
 ppc_dens_overlay(y = y, yrep = yrep_far_1yr_ar[sample(nrow(yrep_far_1yr_ar), 25), ]) +
   ggtitle("far_1yr_ar.3")
 
-## Base model predicted effects ---------------------------------------
+## ar() model predicted effects ---------------------------------------
 
 ## SST anomaly predictions #### 95% CI
 ce1s_1 <- conditional_effects(far_1yr_ar, effect = "anomaly.1yr", re_formula = NA,
