@@ -221,9 +221,8 @@ for(i in 1:length(models)){
 }
 
 
-
-## STEP 4 -------------------------------------
-# Calculate probability at 0.5, 1.0, 1.5, 2.0 warming from hist.585
+# Calculate probability using warming of  0.5 - 1.0 degree from hist.585 as present
+# then calculate FAR
 
 # load warming timing for each model
 timing <- read.csv("./CMIP6/summaries/model.north.pacific.warming.timing.csv", row.names = 1)
@@ -241,14 +240,18 @@ models <- unique(hist_ssp585$model)
 # check that these match with model names from timing
 identical(models, unique(timing$model)) # hot dog
 
-hist_ssp585_prob <- data.frame()
 
-# warming levels
-levels <- seq(0.5, 2, by = 0.5)
+# rename preind.prob
+FAR.estimates <- preindustrial.prob
 
-# make an object to save probabilites
-warming.level.prob.temp.1yr <- warming.level.prob.temp.2yr <- warming.level.prob.temp.3yr <- 
-  warming.anom.1 <- warming.anom.2 <- warming.anom.3 <- NA
+# and fix model names to match others
+FAR.estimates$model <- str_replace_all(FAR.estimates$model, "\\.", "-")
+
+# add columns to save present probabilities
+FAR.estimates$present.prob.1yr <- FAR.estimates$present.prob.2yr <- FAR.estimates$present.prob.3yr <- NA
+
+# and create df for final FAR results
+FAR.final <- data.frame()
 
 # loop through each model
 for(i in 1:length(models)){
@@ -258,232 +261,172 @@ for(i in 1:length(models)){
   hist.temp <- hist_ssp585 %>% 
     dplyr::filter(model == models[i])
   
-  # pull warming years
-  temp <- NA
+  # pull "present" years (0.5 - 1.0 degrees warming)
+  use = timing$year[timing$model == models[i] & timing$level == 0.5]:timing$year[timing$model == models[i] & timing$level == 1.0]
   
-  for(j in 1:length(levels)){
-  # j <- 1
-  temp <- timing %>%
-    filter(model == models[i],
-           level == levels[j])
-  
-  # pull out year warming level is reached, and following 9 years
+  # and limit hist.temp to these years
   hist.temp <- hist.temp %>%
-    filter(year %in% temp$year:(temp$year + 9))
-    
-  for(k in 1:nrow(hist.temp)){
-    # k <- 1
-    
-    # calculate prob for annual, 2-yr, and 3-yr
-    warming.anom.1[k] <- hist.temp$goa.sst[k]
-    warming.level.prob.temp.1yr[j] <- sum(hist.temp$goa.sst >= obs.sst$sc.sst[k])/length(hist.temp$goa.sst)
-    
-    warming.level.prob.temp.2yr[j] <- if_else(is.na() sum(hist.temp$two.yr.mean >= obs.sst$sc.sst2[k], na.rm = T)/length(na.omit(hist.temp$two.yr.mean))
-    
-    warming.level.prob.temp.3yr[j] <- sum(hist.temp$three.yr.mean >= obs.sst$sc.sst3[k], na.rm = T)/length(na.omit(hist.temp$three.yr.mean))
-    
-    ##
-    # record anomaly and calculate prob for annual, 2-yr, and 3-yr
-    preind.anom.1[j] <- pre.temp$goa.sst[j]
-    preind.1[j] <- sum(pre.temp$goa.sst >= pre.temp$goa.sst[j])/length(pre.temp$goa.sst)
-    
-    preind.anom.2[j] <- pre.temp$two.yr.mean[j] 
-    ifelse(is.na(preind.anom.2[j]), preind.2[j] <- NA, preind.2[j] <- sum(pre.temp$two.yr.mean >= pre.temp$two.yr.mean[j], na.rm = T)/length(na.omit(pre.temp$two.yr.mean)))
-    
-    preind.anom.3[j] <- pre.temp$three.yr.mean[j]
-    ifelse(is.na(preind.anom.3[j]), preind.3[j] <- NA, preind.3[j] <- sum(pre.temp$three.yr.mean >= pre.temp$three.yr.mean[j], na.rm = T)/length(na.omit(pre.temp$three.yr.mean)))
-    
-    
-    
-    
-  }
+    filter(year %in% use)
   
-  # add to df
-  hist_ssp585_prob <- rbind(hist_ssp585_prob,
-                              data.frame(model = models[i],
-                                         warming.level = levels[j],
-                                         warming.level.prob.temp.1yr = preind.1,
-                                         warming.level.prob.temp.2yr = preind.2,
-                                         warming.level.prob.temp.3yr = preind.3))
-}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ggplot(observed.FAR, aes(year, FAR.3, color = model)) +
-  geom_line()
-
-ggsave("./CMIP6/figs/obs.FAR.3.by.model.png", width = 8, height = 4)
-
-# same plot for annual SST FAR values
-ggplot(observed.FAR, aes(year, FAR.1, color = model)) +
-  geom_line()
-
-ggsave("./CMIP6/figs/obs.FAR.1.by.model.png", width = 8, height = 4)
-
-## now calculate historical / projected FAR for each model
-
-# object to catch FAR values for each model
-projected.FAR <- data.frame()
-
-
-# loop through each model
-for(i in 1:length(models)){
-  # i <- 1
+  # break out the relevant chunk of Far.estimates (with the model of interest)
+  FAR.temp <- FAR.estimates %>%
+    filter(model == models[i])
   
-  # separate model of interest
-  pre.temp <- preindustrial %>% 
-    dplyr::filter(model == models[i])
-  
-  proj.temp <- hist_ssp585 %>%
-    dplyr::filter(model == models[i])
-  
-  # add 2-yr and 3-yr running means
-  pre.temp$two.yr.mean <- zoo::rollmean(pre.temp$anomaly, 2, fill = NA, align = "right")
-  pre.temp$three.yr.mean <- zoo::rollmean(pre.temp$anomaly, 3, fill = NA, align = "right")
-  
-  proj.temp$two.yr.mean <- zoo::rollmean(proj.temp$anomaly, 2, fill = NA, align = "right")
-  proj.temp$three.yr.mean <- zoo::rollmean(proj.temp$anomaly, 3, fill = NA, align = "right")
-  
-  
-  for(j in 1:nrow(proj.temp)){
-    # j <- 200
-    
-    # calculate FAR for annual, 2-yr, and 3-yr
-    preind.prob <- sum(pre.temp$anomaly >= proj.temp$anomaly[j])/length(pre.temp$anomaly)
-    proj.prob <- sum(proj.temp$anomaly >=  proj.temp$anomaly[j])/length(proj.temp$anomaly)
-    FAR.1 <- 1 - preind.prob/proj.prob
-    
-    preind.prob <- sum(na.omit(pre.temp$two.yr.mean) >= na.omit(proj.temp$two.yr.mean[j]))/length(na.omit(pre.temp$two.yr.mean))
-    proj.prob <- sum(na.omit(proj.temp$two.yr.mean) >=  na.omit(proj.temp$two.yr.mean[j]))/length(na.omit(proj.temp$two.yr.mean))
-    FAR.2 <- 1 - preind.prob/proj.prob
-    
-    preind.prob <- sum(na.omit(pre.temp$three.yr.mean) >= na.omit(proj.temp$three.yr.mean[j]))/length(na.omit(pre.temp$three.yr.mean))
-    proj.prob <- sum(na.omit(proj.temp$three.yr.mean) >=  na.omit(proj.temp$three.yr.mean[j]))/length(na.omit(proj.temp$three.yr.mean))
-    FAR.3 <- 1 - preind.prob/proj.prob
-    
-    projected.FAR <- rbind(projected.FAR, 
-                          data.frame(model = models[i],
-                                     year = proj.temp$year[j],
-                                     FAR.1 = FAR.1,
-                                     FAR.2 = FAR.2,
-                                     FAR.3 = FAR.3))
-    
-  }
-}
-
-# now sort based on warming timing
-
-warming <- read.csv("./CMIP6/summaries/model.ne.pacific.warming.timing.csv", row.names = 1)
-
-FAR.warming <- data.frame()
-
-models <- unique(warming$model)
-levels <- unique(warming$level)
-
-for(i in 1:length(models)){
-  # i <- 1
-  for(j in 1:length(levels)){
+  # now loop through each observation and calculate present probability
+  for(j in 1:nrow(FAR.temp)){
     # j <- 1
     
-    # select the model and warming level of interest
-    temp <- warming %>%
-      dplyr::filter(model == models[i], level == levels[j])
+    # calculate prob for annual, 2-yr, and 3-yr
     
-    # identify the 10 years after a warming level was reached for a particular model
-    time.frame <- temp$year:(temp$year + 9) 
+    FAR.temp$present.prob.1yr[j] <- sum(hist.temp$goa.sst >= FAR.temp$anomaly.1yr[j])/length(hist.temp$goa.sst)
     
-    temp.FAR <- projected.FAR %>%
-      dplyr::filter(model == models[i],
-                    year %in% time.frame)
+    FAR.temp$present.prob.2yr[j] <- ifelse(is.na(FAR.temp$anomaly.2yr[j]), NA,
+                                           sum(hist.temp$two.yr.mean >= FAR.temp$anomaly.2yr[j], na.rm = T)/length(na.omit(hist.temp$two.yr.mean)))
     
-    FAR.warming <- rbind(FAR.warming, 
-                   data.frame(model = models[i],
-                              level = levels[j],
-                              FAR.1 = temp.FAR$FAR.1,
-                              FAR.2 = temp.FAR$FAR.2,
-                              FAR.3 = temp.FAR$FAR.3))
+    FAR.temp$present.prob.3yr[j] <- ifelse(is.na(FAR.temp$anomaly.3yr[j]), NA,
+                                           sum(hist.temp$three.yr.mean >= FAR.temp$anomaly.3yr[j], na.rm = T)/length(na.omit(hist.temp$three.yr.mean)))
+    
   }
   
-}
+  # add year!
+  FAR.temp$year <- 1950:2021
+  
+  # and add to final
+  FAR.final <- rbind(FAR.final, FAR.temp)
+  
+} 
 
-# save
-write.csv(FAR.warming, "./CMIP6/summaries/projected_FAR.csv")
+# now add FAR values
+FAR.final$FAR.1yr <- 1 - FAR.final$prob.1yr / FAR.final$present.prob.1yr
+
+FAR.final$FAR.2yr <- 1 - FAR.final$prob.2yr / FAR.final$present.prob.2yr
+
+FAR.final$FAR.3yr <- 1 - FAR.final$prob.3yr / FAR.final$present.prob.3yr
+
+## NEED TO REMOVE FAR = -Inf!! (i.e., undefined because present probability = 0)
+change <- FAR.final == -Inf
+sum(change, na.rm = T) # 76 instances
+FAR.final[change] <- NA # replace with NA
+
+
+# plot to check
+plot.dat <- FAR.final %>%
+  select(model, year, FAR.1yr, FAR.2yr, FAR.3yr) %>%
+  pivot_longer(cols = c(-year, -model))
+
+# looks good - some negatives!
+
+
+ggplot(plot.dat, aes(year, value, color = name)) +
+  geom_line() +
+  facet_wrap(~model, scales = "free_y")
+
+
+ggsave("./CMIP6/figs/FAR_0.5-1.0_warming_by.model.png", width = 8, height = 4)
+
+
+## set up for brms modeling ----------------------------------
+
+# load model weights (based on ar(1), correlation, bias)
+weight <- read.csv("./CMIP6/summaries/GOA_model_weights_bias_corr_ar1.csv", row.names = 1)
+
+# add to FAR.final
+
+weight <- weight %>%
+  select(name, total) %>%
+  rename(model = name,
+         weight = total) %>%
+  mutate(weight = weight / sd(weight)) # scaling by SD of weights
+
+FAR <- left_join(FAR.final, weight)
+
+# check
+sum(is.na(FAR$weight)) # ok
+hist(FAR$weight, breaks = 8)
 
 ### fit Bayesian regression to estimate across CMIP models----------------------
-## first, observations
-# remove na
-observed.FAR <- na.omit(observed.FAR)
-
-# change FAR = 1 to FAR = 0.9999  and FAR <= 0 to FAR = 0.0001 for beta distribution
-
-change <- observed.FAR$FAR.3 == 1
-observed.FAR$FAR.3[change] <- 0.9999
-
-change <- observed.FAR$FAR.3 <= 0
-observed.FAR$FAR.3[change] <- 0.0001
-
-# and set up explanatory variables as factors
-observed.FAR$year_fac <- as.factor(observed.FAR$year)
-observed.FAR$model_fac <- as.factor(observed.FAR$model)
 
 ## Check distribution --------------------------
-hist(observed.FAR$FAR.3, breaks = 50)
+hist(FAR$FAR.1yr, breaks = 50)
 
 ## brms: setup ---------------------------------------------
 
-## Define model formulas
-far_formula <-  bf(FAR.3 ~ year_fac + (1 | model_fac))
+# setup variables - model as factor
+FAR$model_fac <- as.factor(FAR$model)
 
-## limit to 1970-2020
-## (historical period for pollock assessment)
-observed.FAR.1970.2020 <- observed.FAR %>%
-  dplyr::filter(year >= 1970)
+# 
+
+## Define model formula
+far_formula <-  bf(FAR.1yr | resp_weights(weight) + trunc(ub = 1) ~ s(anomaly.1yr) + (1 | model_fac))
+
 
 ## fit: brms --------------------------------------
 
-## observed time series
-obs_far <- brm(far_formula,
-                     data = observed.FAR.1970.2020,
-                     family = Beta(),
-                     cores = 4, chains = 4, iter = 15000,
+## base model - Gaussian distribution truncated at one, each observation weighted by scaled model weight
+far_1yr_base <- brm(far_formula,
+                     data = FAR,
+                     cores = 4, chains = 4, iter = 3000,
                      save_pars = save_pars(all = TRUE),
-                     control = list(adapt_delta = 0.999, max_treedepth = 15))
+                     control = list(adapt_delta = 0.999, max_treedepth = 14))
 
-saveRDS(obs_far, file = "brms_output/obs_far.rds")
+saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
-obs_far  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
-saveRDS(obs_far, file = "output/obs_far.rds")
+far_1yr_base  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
+saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
-obs_far <- readRDS("./brms_output/obs_far.rds")
-check_hmc_diagnostics(obs_far$fit)
-neff_lowest(obs_far$fit)
-rhat_highest(obs_far$fit)
-summary(obs_far)
-bayes_R2(obs_far)
-y <- observed.FAR.1970.2020$FAR.3
-yrep_obs_far  <- fitted(obs_far, scale = "response", summary = FALSE)
-ppc_dens_overlay(y = y, yrep = yrep_obs_far[sample(nrow(yrep_obs_far), 25), ]) +
-  ggtitle("obs_far.3")
+far_1yr_base <- readRDS("./CMIP6/brms_output/far_1yr_base.rds")
 
-## Predicted effects ---------------------------------------
+check_hmc_diagnostics(far_1yr_base$fit)
+neff_lowest(far_1yr_base$fit)
+rhat_highest(far_1yr_base$fit)
+summary(far_1yr_base)
+bayes_R2(far_1yr_base)
 
-## Year predictions ##
+y <- as.vector(na.omit(FAR$FAR.1yr)) # this does not account for weights - need to check that
+yrep_far_1yr_base  <- fitted(far_1yr_base, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_far_1yr_base[sample(nrow(yrep_far_1yr_base), 25), ]) +
+  ggtitle("far_1yr_base.3")
+
+## Base model predicted effects ---------------------------------------
+
+## SST anomaly predictions #### 95% CI
+ce1s_1 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.025, 0.975))
+## 90% CI
+ce1s_2 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.05, 0.95))
+## 80% CI
+ce1s_3 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.1, 0.9))
+dat_ce <- ce1s_1$anomaly.1yr
+dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
+dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
+dat_ce[["upper_90"]] <- ce1s_2$far[["upper__"]]
+dat_ce[["lower_90"]] <- ce1s_2$far[["lower__"]]
+dat_ce[["upper_80"]] <- ce1s_3$far[["upper__"]]
+dat_ce[["lower_80"]] <- ce1s_3$far[["lower__"]]
+dat_ce[["rug.anom"]] <- c(jitter(unique(data$far), amount = 0.01),
+                          rep(NA, 100-length(unique(data$far))))
+
+ggplot(dat_ce) +
+  aes(x = effect1__, y = estimate__) +
+  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+  geom_line(size = 1, color = "red3") +
+  labs(x = "FAR: three-year running mean SST", y = "Age diversity") +
+  theme_bw()+
+  geom_rug(aes(x=rug.anom, y=NULL))
+
+
+ggsave("./pollock_age_diversity/figs/three.yr_sst_predicted_age_diversity.png", width = 6, height = 4)
+
+
+
+
 
 ## 95% CI
-ce1s_1 <- conditional_effects(obs_far, probs = c(0.025, 0.975))
+ce1s_1 <- conditional_effects(far_1yr_base, probs = c(0.025, 0.975))
 obs.95 <- ce1s_1$year_fac %>%
   select(year_fac, estimate__, lower__, upper__)
 names(obs.95)[3:4] <- c("ymin.95", "ymax.95")
