@@ -380,6 +380,11 @@ FAR <- left_join(FAR.final, weight)
 sum(is.na(FAR$weight)) # ok
 hist(FAR$weight, breaks = 8)
 
+# look at distribution of 2016 and 2019 estimates
+check <- FAR.final$FAR.1yr[FAR.final$year %in% c(2016, 2019)]
+
+hist(check, breaks = 40)
+
 ### fit Bayesian regression to estimate across CMIP models----------------------
 
 ## Check distribution --------------------------
@@ -408,15 +413,15 @@ saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 # far_1yr_base  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
 saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
-# far_1yr_base <- readRDS("./CMIP6/brms_output/far_1yr_base.rds")
-# 
-# check_hmc_diagnostics(far_1yr_base$fit)
-# neff_lowest(far_1yr_base$fit)
-# rhat_highest(far_1yr_base$fit)
-# summary(far_1yr_base)
-# # bayes_R2(far_1yr_base)
-# 
-# plot(conditional_smooths(far_1yr_base), ask = FALSE)
+far_1yr_base <- readRDS("./CMIP6/brms_output/far_1yr_base.rds")
+
+check_hmc_diagnostics(far_1yr_base$fit)
+neff_lowest(far_1yr_base$fit)
+rhat_highest(far_1yr_base$fit)
+summary(far_1yr_base)
+bayes_R2(far_1yr_base)
+
+plot(conditional_smooths(far_1yr_base), ask = FALSE)
 
 # y <- as.vector(na.omit(FAR$FAR.1yr)) # this does not account for weights - need to check that
 # yrep_far_1yr_base  <- fitted(far_1yr_base, scale = "response", summary = FALSE)
@@ -425,35 +430,76 @@ saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
 ## Base model predicted effects ---------------------------------------
 
-# ## SST anomaly predictions #### 95% CI
-# ce1s_1 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
-#                               probs = c(0.025, 0.975))
-# ## 90% CI
-# ce1s_2 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
-#                               probs = c(0.05, 0.95))
-# ## 80% CI
-# ce1s_3 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
-#                               probs = c(0.1, 0.9))
-# dat_ce <- ce1s_1$anomaly.1yr
-# dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
-# dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
-# dat_ce[["upper_90"]] <- ce1s_2$anomaly.1yr[["upper__"]]
-# dat_ce[["lower_90"]] <- ce1s_2$anomaly.1yr[["lower__"]]
-# dat_ce[["upper_80"]] <- ce1s_3$anomaly.1yr[["upper__"]]
-# dat_ce[["lower_80"]] <- ce1s_3$anomaly.1yr[["lower__"]]
-# 
-# ggplot(dat_ce) +
-#   aes(x = effect1__, y = estimate__) +
-#   geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
-#   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
-#   geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
-#   geom_line(size = 1, color = "red3") +
-#   labs(y = "Fraction of attributable risk", x = "SST anomaly") +
-#   theme_bw()
-# 
-# 
-# ggsave("./CMIP6/figs/far_1yr_base.png", width = 6, height = 4)
-# 
+## SST anomaly predictions #### 95% CI
+ce1s_1 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.025, 0.975))
+## 90% CI
+ce1s_2 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.05, 0.95))
+## 80% CI
+ce1s_3 <- conditional_effects(far_1yr_base, effect = "anomaly.1yr", re_formula = NA,
+                              probs = c(0.1, 0.9))
+dat_ce <- ce1s_1$anomaly.1yr
+dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
+dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
+dat_ce[["upper_90"]] <- ce1s_2$anomaly.1yr[["upper__"]]
+dat_ce[["lower_90"]] <- ce1s_2$anomaly.1yr[["lower__"]]
+dat_ce[["upper_80"]] <- ce1s_3$anomaly.1yr[["upper__"]]
+dat_ce[["lower_80"]] <- ce1s_3$anomaly.1yr[["lower__"]]
+
+ggplot(dat_ce) +
+  aes(x = effect1__, y = estimate__) +
+  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+  geom_line(size = 1, color = "red3") +
+  labs(y = "Fraction of attributable risk", x = "SST anomaly") +
+  theme_bw()
+
+
+ggsave("./CMIP6/figs/far_1yr_base.png", width = 6, height = 4)
+
+# predict
+
+newdata <- obs.sst %>%
+  select(year, sc.sst) %>%
+  rename(anomaly.1yr = sc.sst)
+
+pred.far_1yr_base <- posterior_epred(far_1yr_base, newdata = newdata, re_formula = NA, resp = "FAR.1yr")
+
+# functions for different credible intervals
+f_95_l <- function(x) quantile(x, 0.025)
+f_95_u <- function(x) quantile(x, 0.975)
+
+f_90_l <- function(x) quantile(x, 0.05)
+f_90_u <- function(x) quantile(x, 0.95)
+
+f_80_l <- function(x) quantile(x, 0.1)
+f_80_u <- function(x) quantile(x, 0.9)
+
+
+# and plot
+plot.predict <- data.frame(year = 1950:2021,
+                           estimate__ = colMeans(pred.far_1yr_base),
+                           lower_95 = apply(pred.far_1yr_base, 2, f_95_l),
+                           upper_95 = apply(pred.far_1yr_base, 2, f_95_u),
+                           lower_90 = apply(pred.far_1yr_base, 2, f_90_l),
+                           upper_90 = apply(pred.far_1yr_base, 2, f_90_u),
+                           lower_80 = apply(pred.far_1yr_base, 2, f_80_l),
+                           upper_80 = apply(pred.far_1yr_base, 2, f_80_u))
+
+
+ggplot(plot.predict) +
+  aes(x = year, y = estimate__) +
+  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+  geom_line(size = 1, color = "red3") +
+  labs(y = "Fraction of attributable risk", x = "SST anomaly") +
+  theme_bw()
+
+ggsave("./CMIP6/figs/predicted_far_1950-2022_far_1yr_base.png", width = 6, height = 4)
+
 
 ## second model - base model + ar() term -----------------------
 
