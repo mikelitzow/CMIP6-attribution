@@ -96,6 +96,7 @@ ggplot(plot.sst, aes(year, value, color = name)) +
 
 ## STEP 2 -----------------------
 # calculate probability wrt 1950-1999 for each model preindustrial and hist_ssp585
+# N.B. - historical 1950-1999 period is climatology for both preindustrial and hist_ssp585
 
 # load monthly sst model runs
 
@@ -109,35 +110,71 @@ ff <- function(x) tapply(x, yr, mean)
 mod.dat <- mod.dat %>%
   select(-date)
 
-annual.sst <- apply(mod.dat, 2, ff)
+annual.sst <- as.data.frame(apply(mod.dat, 2, ff))
 
 # change to C if needed
 change <- colMeans(annual.sst) > 200
 
 annual.sst[,change] <- annual.sst[,change] - 273.15
 
-# change to anomalies to wrt 1950-1999
-yr <- 1850:2099
+# separate preindustrial and hist_ssp585 runs 
+keep <- grep("piControl", names(annual.sst))
 
-ff <- function(x) (x - mean(x[yr %in% 1950:1999])) / sd(x[yr %in% 1950:1999])
-
-annual.anom <- apply(annual.sst, 2, ff)
-  
-# separate preindustrial and hist_ssp585 runs for convenience
-keep <- grep("piControl", names(mod.dat))
-
-preindustrial <- as.data.frame(annual.anom[,keep])
+preindustrial <- (annual.sst[,keep])
 
 # clean up names
 names(preindustrial) <- str_replace(names(preindustrial), ".nc_piControl", "")
 
-keep <- grep("hist", names(mod.dat))
+keep <- grep("hist", names(annual.sst))
 
-hist_ssp585 <- as.data.frame(annual.anom[,keep])
+hist_ssp585 <- annual.sst[,keep]
 
 # clean up names
 names(hist_ssp585) <- str_replace(names(hist_ssp585), ".nc_hist_ssp585", "")
 
+
+# change to anomalies to wrt historical 1950-1999
+yr <- 1850:2099
+
+# calculate climatology (mean and SD) for 1950-1999 historical runs
+ff <- function(x) mean(x[yr %in% 1950:1999])
+
+hist.clim.mean <- apply(hist_ssp585, 2, ff)
+
+ff <- function(x) sd(x[yr %in% 1950:1999])
+
+hist.clim.sd <- apply(hist_ssp585, 2, ff)
+
+# confirm names are lined up
+identical(names(hist.clim.mean), names(hist_ssp585))
+identical(names(hist.clim.sd), names(hist_ssp585))
+
+# now calculate anomalies
+
+for(i in 1:length(hist.clim.mean)){
+  
+  hist_ssp585[,i] <- (hist_ssp585[,i] - hist.clim.mean[i]) / hist.clim.sd[i]
+  
+}
+
+# check 
+colMeans(hist_ssp585[yr %in% 1950:1999,]) # perfecto
+
+# now the same with preindustrial runs
+
+# confirm names are lined up
+identical(names(hist.clim.mean), names(preindustrial))
+identical(names(hist.clim.sd), names(preindustrial))
+
+# now calculate anomalies
+
+for(i in 1:length(hist.clim.mean)){
+  
+  preindustrial[,i] <- (preindustrial[,i] - hist.clim.mean[i]) / hist.clim.sd[i]
+  
+}
+
+hist(colMeans(preindustrial[yr %in% 1950:1999,]))
 
 # pivot longer
 preindustrial <- preindustrial %>%
@@ -171,7 +208,7 @@ ggsave("./CMIP6/figs/hist585_vs_preindustrial_anomalies_wrt_1950-1999.png", widt
 
 ## STEP 3 ---------------------------------------------
 # Calculate FAR for each anomaly in the observed time series, 
-# for each model using years between warming = 0.5 and warming = 1.0 as present
+# for each model using years between 1950 and warming = 1.0 as present
 
 # get vector of model names
 models <- unique(preindustrial$model)
@@ -220,7 +257,7 @@ for(i in 1:length(models)){
 }
 
 
-# Calculate probability using warming of  0.5 - 1.0 degree from hist.585 as present
+# Calculate probability using 1950 through 1.0 degree warming from hist.585 as "present"
 # then calculate FAR
 
 # load warming timing for each model
@@ -261,7 +298,7 @@ for(i in 1:length(models)){
     dplyr::filter(model == models[i])
   
   # pull "present" years (0.5 - 1.0 degrees warming)
-  use = timing$year[timing$model == models[i] & timing$level == 0.5]:timing$year[timing$model == models[i] & timing$level == 1.0]
+  use = 1950:timing$year[timing$model == models[i] & timing$level == 1.0]
   
   # and limit hist.temp to these years
   hist.temp <- hist.temp %>%
@@ -304,7 +341,7 @@ FAR.final$FAR.3yr <- 1 - FAR.final$prob.3yr / FAR.final$present.prob.3yr
 
 ## NEED TO REMOVE FAR = -Inf!! (i.e., undefined because present probability = 0)
 change <- FAR.final == -Inf
-sum(change, na.rm = T) # 76 instances
+sum(change, na.rm = T) # 18 instances
 FAR.final[change] <- NA # replace with NA
 
 
