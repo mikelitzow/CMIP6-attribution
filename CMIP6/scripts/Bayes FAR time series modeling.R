@@ -396,7 +396,7 @@ hist(FAR$FAR.1yr, breaks = 50)
 FAR$model_fac <- as.factor(FAR$model)
 
 ## Define model formula
-far_formula <-  bf(FAR.1yr | weights(weight) + trunc(ub = 1.01) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
+far_formula <-  bf(FAR.1yr | weights(weight) + trunc(ub = 1.03) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
 
 
 ## fit: brms --------------------------------------
@@ -504,7 +504,7 @@ ggsave("./CMIP6/figs/predicted_far_1950-2022_far_1yr_base.png", width = 6, heigh
 ## second model - base model + ar() term -----------------------
 
 ## Define model formula
-far_ar_formula <-  bf(FAR.1yr | weights(weight) + trunc(ub = 1.01) ~
+far_ar_formula <-  bf(FAR.1yr | weights(weight) + trunc(ub = 1.03) ~
                         s(anomaly.1yr, k = 5) + (1 | model_fac) + ar(gr = model_fac)) 
 
 # autocorrelation modeled within each CMIP6 model 
