@@ -396,22 +396,22 @@ hist(FAR$FAR.1yr, breaks = 50)
 FAR$model_fac <- as.factor(FAR$model)
 
 ## Define model formula
-far_formula <-  bf(FAR.1yr | weights(weight) + trunc(ub = 1.03) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
+far_formula <-  bf(FAR.1yr | weights(weight, scale = TRUE) + trunc(ub = 1.03) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
 
 
 ## fit: brms --------------------------------------
 
-## base model - Gaussian distribution truncated at one, each observation weighted by scaled model weight
+## base model - Gaussian distribution truncated at 1.03, each observation weighted by scaled model weight
 far_1yr_base <- brm(far_formula,
                      data = FAR,
-                     cores = 4, chains = 4, iter = 7000,
+                     cores = 4, chains = 4, iter = 6000,
                      save_pars = save_pars(all = TRUE),
                      control = list(adapt_delta = 0.999, max_treedepth = 16))
 
 saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
 # far_1yr_base  <- add_criterion(obs_far, c("loo", "bayes_R2"), moment_match = TRUE)
-saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
+# saveRDS(far_1yr_base, file = "./CMIP6/brms_output/far_1yr_base.rds")
 
 far_1yr_base <- readRDS("./CMIP6/brms_output/far_1yr_base.rds")
 
@@ -504,12 +504,11 @@ ggsave("./CMIP6/figs/predicted_far_1950-2022_far_1yr_base.png", width = 6, heigh
 ## second model - base model + ar() term -----------------------
 
 ## Define model formula
-far_ar_formula <-  bf(FAR.1yr | weights(weight) + trunc(ub = 1.03) ~
+far_ar_formula <-  bf(FAR.1yr | weights(weight, scale = TRUE) + trunc(ub = 1.03) ~
                         s(anomaly.1yr, k = 5) + (1 | model_fac) + ar(gr = model_fac)) 
 
 # autocorrelation modeled within each CMIP6 model 
 
-## base model - Gaussian distribution truncated at one, each observation weighted by scaled model weight
 far_1yr_ar <- brm(far_ar_formula,
                     data = FAR,
                     cores = 4, chains = 4, iter = 7000,
