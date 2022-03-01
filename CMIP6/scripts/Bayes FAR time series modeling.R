@@ -396,12 +396,12 @@ hist(FAR$FAR.1yr, breaks = 50)
 FAR$model_fac <- as.factor(FAR$model)
 
 ## Define model formula
-far_formula <-  bf(FAR.1yr | weights(weight, scale = TRUE) + trunc(ub = 1.03) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
+far_formula <-  bf(FAR.1yr | weights(weight, scale = TRUE) + trunc(ub = 1.04) ~ s(anomaly.1yr, k = 5) + (1 | model_fac))
 
 
 ## fit: brms --------------------------------------
 
-## base model - Gaussian distribution truncated at 1.03, each observation weighted by scaled model weight
+## base model - Gaussian distribution truncated at 1.04, each observation weighted by scaled model weight
 far_1yr_base <- brm(far_formula,
                      data = FAR,
                      cores = 4, chains = 4, iter = 6000,
@@ -498,7 +498,7 @@ ggplot(plot.predict) +
   labs(y = "Fraction of attributable risk", x = "SST anomaly") +
   theme_bw()
 
-ggsave("./CMIP6/figs/predicted_far_1950-2022_far_1yr_base.png", width = 6, height = 4)
+ggsave("./CMIP6/figs/predicted_far_1950-2021_far_1yr_base.png", width = 6, height = 4)
 
 
 ## second model - base model + ar() term -----------------------
