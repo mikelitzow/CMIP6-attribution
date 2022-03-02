@@ -276,7 +276,7 @@ for(i in 1: length(sst.data.names)){
   
   temp.annual <- tapply(temp.monthly.sst, yr[yr %in% 1950:2021], mean) 
   
-  temp.2yr <- rollmean(temp.annual, 2, fill = NA, align = "right") # for salmon - year before and year of ocean entry
+  temp.2yr <- rollmean(temp.annual, 2, fill = NA, align = "left") # for salmon - year before and year of ocean entry
   
   temp.3yr <- rollmean(temp.annual, 3, fill = NA, align = "center") # for salmon - year before, year of, and year after ocean entry
 
@@ -291,7 +291,7 @@ for(i in 1: length(sst.data.names)){
   
   temp.winter[names(temp.winter) %in% c(leading, trailing)] <- NA
   
-  temp.winter.2yr <- rollmean(temp.winter, 2, fill = NA, align = "right")
+  temp.winter.2yr <- rollmean(temp.winter, 2, fill = NA, align = "left")
   
   temp.winter.3yr <- rollmean(temp.winter, 3, fill = NA, align = "center")
   
