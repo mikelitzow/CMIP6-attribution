@@ -235,7 +235,7 @@ winter.year <- if_else(m.1950.2021  %in% c("Nov", "Dec"), as.numeric(as.characte
 winter.year <- winter.year[m.1950.2021  %in% c("Nov", "Dec", "Jan", "Feb", "Mar")]
 
 # create blank data frame for catching results
-temp.time.series <- data.frame()
+temp.time.series <- temp.anomaly.time.series <- data.frame()
 
 # processing loop
 
@@ -273,10 +273,9 @@ for(i in 1: length(sst.data.names)){
   temp.monthly.sst <- apply(temp.dat[yr %in% 1950:2021,], 1, weighted.cell.mean) 
   
   # calculate annual means
-  
   temp.annual <- tapply(temp.monthly.sst, yr[yr %in% 1950:2021], mean) 
   
-  temp.2yr <- rollmean(temp.annual, 2, fill = NA, align = "left") # for salmon - year before and year of ocean entry
+  temp.2yr <- rollmean(temp.annual, 2, fill = NA, align = "left") # for salmon - year of and year after ocean entry
   
   temp.3yr <- rollmean(temp.annual, 3, fill = NA, align = "center") # for salmon - year before, year of, and year after ocean entry
 
@@ -306,7 +305,42 @@ for(i in 1: length(sst.data.names)){
                                        winter.unsmoothed = temp.winter[names(temp.winter) %in% 1950:2021],
                                        winter.two.yr.running.mean = temp.winter.2yr[names(temp.winter) %in% 1950:2021],
                                        winter.three.yr.running.mean = temp.winter.3yr[names(temp.winter) %in% 1950:2021]))
+
+  ## now calculate the data as anomalies wrt 1950-1999
+  # calculate annual anomalies
+  annual.climatology.mean <- mean(temp.winter[names(temp.annual) %in% 1950:1999])
+    
+  annual.climatology.sd <- sd(temp.annual[names(temp.annual) %in% 1950:1999])
   
+  temp.annual.anom <- (temp.annual - annual.climatology.mean) / annual.climatology.sd
+  
+  temp.anom.2yr <- rollmean(temp.annual.anom, 2, fill = NA, align = "left") # for salmon - year of and year after ocean entry
+  
+  temp.anom.3yr <- rollmean(temp.annual.anom, 3, fill = NA, align = "center") # for salmon - year before, year of, and year after ocean entry
+  
+  # calculate winter anomalies
+  winter.climatology.mean <- mean(temp.winter[names(temp.winter) %in% 1950:1999], na.rm = T)
+  
+  winter.climatology.sd <- sd(temp.winter[names(temp.winter) %in% 1950:1999], na.rm = T)
+  
+  temp.winter.anom <- (temp.winter - winter.climatology.mean) / winter.climatology.sd
+  
+  temp.winter.anom.2yr <- rollmean(temp.winter.anom, 2, fill = NA, align = "left")
+  
+  temp.winter.anom.3yr <- rollmean(temp.winter.anom, 3, fill = NA, align = "center")
+  
+  # combine into data frame of time series by region
+  temp.anomaly.time.series <- rbind(temp.anomaly.time.series,
+                            data.frame(region = sst.clean.names[i],
+                                       year = 1950:2021,
+                                       annual.anomaly.unsmoothed = temp.annual.anom[names(temp.annual.anom) %in% 1950:2021],
+                                       annual.anomaly.two.yr.running.mean = temp.anom.2yr[names(temp.annual.anom) %in% 1950:2021],
+                                       annual.anomaly.three.yr.running.mean = temp.anom.3yr[names(temp.annual.anom) %in% 1950:2021],
+                                       winter.anomaly.unsmoothed = temp.winter.anom[names(temp.winter.anom) %in% 1950:2021],
+                                       winter.anomaly.two.yr.running.mean = temp.winter.anom.2yr[names(temp.winter.anom) %in% 1950:2021],
+                                       winter.anomaly.three.yr.running.mean = temp.winter.anom.3yr[names(temp.winter.anom) %in% 1950:2021]))
+  
+    
   }
 
 
@@ -327,3 +361,4 @@ ggplot(plot.dat, aes(year, value, color = region)) +
   
 # and save 
 write.csv(temp.time.series, "./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv", row.names = F)
+write.csv(temp.anomaly.time.series, "./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv", row.names = F)
