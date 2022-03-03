@@ -308,7 +308,7 @@ for(i in 1: length(sst.data.names)){
 
   ## now calculate the data as anomalies wrt 1950-1999
   # calculate annual anomalies
-  annual.climatology.mean <- mean(temp.winter[names(temp.annual) %in% 1950:1999])
+  annual.climatology.mean <- mean(temp.annual[names(temp.annual) %in% 1950:1999])
     
   annual.climatology.sd <- sd(temp.annual[names(temp.annual) %in% 1950:1999])
   
