@@ -392,4 +392,4 @@ regional.polygons <- rbind(ebs.poly,
                            ncc.poly,
                            scc.poly)
 
-write.csv(regional.polygons, "./CMIP6/data/regional_polygons.csv", row.names = F)
+write.csv(regional.polygons, "./CMIP6/summaries/regional_polygons.csv", row.names = F)
