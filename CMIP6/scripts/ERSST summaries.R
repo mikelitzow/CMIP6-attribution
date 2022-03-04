@@ -362,3 +362,34 @@ ggplot(plot.dat, aes(year, value, color = region)) +
 # and save 
 write.csv(temp.time.series, "./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv", row.names = F)
 write.csv(temp.anomaly.time.series, "./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv", row.names = F)
+
+# create dataframe saving the coordinates for each polygon to use for subsetting CMIP6 draws
+
+
+ebs.poly <- data.frame(x = ebs.x,
+                       y = ebs.y,
+                       region = "ebs")
+
+goa.poly <- data.frame(x = goa.x,
+                       y = goa.y,
+                       region = "goa")
+
+bc.poly <- data.frame(x = bc.x,
+                       y = bc.y,
+                       region = "bc")
+
+ncc.poly <- data.frame(x = ncc.x,
+                       y = ncc.y,
+                       region = "ncc")
+
+scc.poly <- data.frame(x = scc.x,
+                       y = scc.y,
+                       region = "scc")
+
+regional.polygons <- rbind(ebs.poly,
+                           goa.poly,
+                           bc.poly,
+                           ncc.poly,
+                           scc.poly)
+
+write.csv(regional.polygons, "./CMIP6/data/regional_polygons.csv", row.names = F)
