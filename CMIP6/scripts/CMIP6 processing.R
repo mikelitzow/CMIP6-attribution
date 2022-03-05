@@ -78,6 +78,15 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   
   SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))
   
+  # check for values in degrees K and convert if needed
+  if(max(colMeans(SST), na.rm = T) > 200) {
+    
+    SST <- SST - 273.15
+    
+  }
+  
+  
+  
   # Keep track of corresponding latitudes and longitudes of each column:
   lat <- rep(y, length(x))
   lon <- rep(x, each = length(y))
