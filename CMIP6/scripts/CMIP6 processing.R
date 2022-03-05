@@ -47,24 +47,18 @@ CMIP6.sst.time.series <- CMIP6.anomaly.time.series <- data.frame()
 
 for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
 
-  # i <- 1
-  
   path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.new[i], sep="")
   
   # load file
   nc <- nc_open(path)
   
-  # nc
-  
-  # extract one experiment at a time and save with file name
+  # extract one experiment at a time
   
   # get list of experiments
   experiments <-  ncvar_get(nc, "experiment", verbose = F)
   
   for(j in 1:length(experiments)){ # start j loop (each experiment)
-  
-  # j <- 1
-  
+
   # extract dates
 
   d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
@@ -96,9 +90,6 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   # annual unsmoothed, annual.two.yr.running.mean, annual.three.yr.running.mean
   # winter.unsmoothed, winter.two.yr.running.mean, winter.three.yr.running.mean
   
-  # 1950-2099 for regional sst (limited by period deemed trustworthy for ERSST in GOA)
-  # 1850-2099 for full N. Pacific (to estimate warming rate for each CMIP6 model)
-
   # begin with full model grid 1850-2099
   
   # calculate monthly mean temp weighted by area  
@@ -133,10 +124,9 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   
   temp.winter.3yr <- rollmean(temp.winter, 3, fill = NA, align = "center")
   
-  
   # combine into data frame of time series for each model
   CMIP6.sst.time.series <- rbind(CMIP6.sst.time.series,
-                            data.frame(region = region.names[1,1],
+                            data.frame(region = region.names[1,1], # fixed at "North_Pacific" for this first summary
                                        model = str_remove(files.new[i], ".nc"),
                                        experiment = experiments[j],
                                        year = 1850:2099,
@@ -171,9 +161,8 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   temp.winter.anom.3yr <- rollmean(temp.winter.anom, 3, fill = NA, align = "center")
   
   # combine into data frame of anomalies
-  
   CMIP6.anomaly.time.series <- rbind(CMIP6.anomaly.time.series,
-                                    data.frame(region = region.names[1,1],
+                                    data.frame(region = region.names[1,1], # fixed at "North_Pacific" for this first summary
                                                model = str_remove(files.new[i], ".nc"),
                                                experiment = experiments[j],
                                                year = 1850:2099,
@@ -188,15 +177,17 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   ## query each of the regional time series
       
   for(k in 1:length(unique(regional.polygons$region))){ # open k loop (smaller regions)
-    # k <- 1
+
+    # keep track of progress
     print(paste(i, j, k, sep = "-"))
+    
     # define regional polygon
     temp.polygon <- regional.polygons %>%
       filter(region == unique(regional.polygons$region)[k])
     
     # select sst cells in this polygon; all others become NA
     xp <- cbind(temp.polygon$x, temp.polygon$y)
-    loc=cbind(lon, lat)
+    loc <- cbind(lon, lat)
     check <- in.poly(loc, xp=xp)
     
     temp.sst <- SST
@@ -228,11 +219,6 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
     temp.3yr <- rollmean(temp.annual, 3, fill = NA, align = "center") # for salmon - year before, year of, and year after ocean entry
       
     # calculate winter means
-    
-    # # first, define winter year
-    # winter.year <- if_else(m %in% c("Nov", "Dec"), as.numeric(as.character(yr))+1, as.numeric(as.character(yr)))
-    # winter.year <- winter.year[m %in% c("Nov", "Dec", "Jan", "Feb", "Mar")]
-    
     temp.winter.monthly.sst <- temp.monthly.sst[m %in% c("Nov", "Dec", "Jan", "Feb", "Mar")]
       
     temp.winter <- tapply(temp.winter.monthly.sst, winter.year, mean)
@@ -246,7 +232,6 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
     temp.winter.2yr <- rollmean(temp.winter, 2, fill = NA, align = "left")
       
     temp.winter.3yr <- rollmean(temp.winter, 3, fill = NA, align = "center")
-      
       
     # combine into data frame of time series by region
     CMIP6.sst.time.series <- rbind(CMIP6.sst.time.series,
@@ -297,9 +282,8 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
                                                   winter.two.yr.running.mean = temp.winter.anom.2yr[names(temp.winter.anom) %in% 1850:2099],
                                                   winter.three.yr.running.mean = temp.winter.anom.3yr[names(temp.winter.anom) %in% 1850:2099]))
     
-    
     } # close k loop (smaller regions)
-    # } # close if statement selecting piControl only
+  
   } # close j loop (experiments)
   
 } # close i loop (models)
