@@ -184,67 +184,7 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
                                                winter.two.yr.running.mean = temp.winter.anom.2yr[names(temp.winter.anom) %in% 1850:2099],
                                                winter.three.yr.running.mean = temp.winter.anom.3yr[names(temp.winter.anom) %in% 1850:2099]))
 
-#   } # close j loop (experiments)
-# } # close i loop (models)
-# 
-# # save
-# write.csv(CMIP6.sst.time.series, "./CMIP6/summaries/North_Pacific_CMIP6_sst_time_series.csv", row.names = F)
-# write.csv(CMIP6.anomaly.time.series, "./CMIP6/summaries/North_Pacific_CMIP6_anomaly_time_series.csv", row.names = F)
-# 
-# 
-# ## now for each region (preindustrial) -------------
-# 
-# # create blank df to hold time series of sst and anomalies wrt 1950-1999
-# CMIP6.sst.time.series <- CMIP6.anomaly.time.series <- data.frame()
-# 
-# for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
-# 
-#   # i <- 1
-#   
-#   path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.new[i], sep="")
-#   
-#   # load file
-#   nc <- nc_open(path)
-#   
-#   # nc
-#   
-#   # extract one experiment at a time and save with file name
-#   
-#   # get list of experiments
-#   experiments <-  ncvar_get(nc, "experiment", verbose = F)
-# 
-#   for(j in 1:length(experiments)){ # start j loop (each experiment)
-#     # j <- 1
-#     
-#     if(experiments[j] == "piControl"){
-#       
-#       # extract dates
-#       
-#       d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
-#       m <- months(d)
-#       yr <- years(d)
-#       
-#       # extract lat / long
-#       
-#       x <- ncvar_get(nc, "lon")
-#       y <- ncvar_get(nc, "lat")
-#       
-#       # extract SST
-#       
-#       SST <- ncvar_get(nc, "tos", verbose = F, start = c(j,1,1,1), count = c(1,-1,-1,-1))
-#       
-#       SST <- aperm(SST, 3:1)
-#       
-#       SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))
-#       
-#       # Keep track of corresponding latitudes and longitudes of each column:
-#       lat <- rep(y, length(x))
-#       lon <- rep(x, each = length(y))
-#       dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
-#       
-#       # and cell weight for this model 
-#       weights <- cell.weight(lat)
-      
+
   ## query each of the regional time series
       
   for(k in 1:length(unique(regional.polygons$region))){ # open k loop (smaller regions)
