@@ -84,7 +84,7 @@ ncc.y <- c(49, 41, 41, 49, 49)
 polygon(ncc.x, ncc.y, border = "red", lwd = 2)
 
 # southern CCE polygon
-scc.x <- c(238, 243, 239, 235, 235, 238)
+scc.x <- c(238, 243, 237, 233, 233, 238)
 scc.y <- c(41, 33, 33, 39, 41, 41)
 
 polygon(scc.x, scc.y, border = "red", lwd = 2)
