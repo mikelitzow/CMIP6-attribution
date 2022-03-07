@@ -231,7 +231,7 @@ ggplot(model.weights, aes(ar, ar.scaled.min)) +
 
 # and finally, create total weight and scale for region-window combinations
 model.weights <- model.weights %>%
-  mutate(total.weight = bias.scaled.min + correlation.scaled.min, ar.scaled.min) 
+  mutate(total.weight = bias.scaled.min^2 + correlation.scaled.min^2 + ar.scaled.min^2) 
 
 sc.total.final <- model.weights %>%
   split(.$region.window) %>%
@@ -247,8 +247,6 @@ ggplot(model.weights, aes(total.weight, scaled.total.weight)) +
   geom_point() +
   facet_wrap(~region.window)
 
-
-
 # plot
 order <- data.frame(region = regions,
                     order = 1:6)
@@ -257,7 +255,7 @@ plot.weights <- model.weights %>%
   left_join(., order) %>%
   mutate(region = reorder(region, order))
 
-ggplot(plot.weights, aes(model, total.weight)) +
+ggplot(plot.weights, aes(model, scaled.total.weight)) +
   geom_bar(stat = "identity", fill = "dark grey", color = "black") +
   facet_grid(region ~ window) +
   theme(axis.title.x = element_blank(),
@@ -265,7 +263,12 @@ ggplot(plot.weights, aes(model, total.weight)) +
 
 ggsave("./CMIP6/figs/model_weights_by_region_window.png", width = 8, height = 10, units = 'in')
 
-hist(scale(model.weights$total.weight, center = F), breaks = 20)
+ggplot(plot.weights, aes(scaled.total.weight)) +
+  geom_histogram(bins = 12, fill = "dark grey", color = "black") +
+  facet_grid(region ~ window) 
+
+
+ggsave("./CMIP6/figs/model_weight_histograms_by_region_window.png", width = 6, height = 10, units = 'in')
 
 # save
 
