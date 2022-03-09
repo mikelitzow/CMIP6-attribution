@@ -34,6 +34,10 @@ ggplot(ersst.dat, aes(year, annual.anomaly.1yr)) +
 
 ggsave("./CMIP6/figs/observed_sst_anomalies_1950-2021_by_region.png", width = 8, height = 4)
 
+# version with just ecosystems of focus for salmon study
+just.dat <- ersst.dat %>%
+  filter(region %in% c("Gulf_of_Alaska", "British_Columbia_Coast"))
+
 ggplot(just.dat, aes(year, annual.anomaly.1yr, color = region)) +
   geom_line() +
   scale_color_manual(values = cb[c(2,6)]) +
@@ -43,10 +47,8 @@ ggplot(just.dat, aes(year, annual.anomaly.1yr, color = region)) +
 
 ggsave("./CMIP6/figs/observed_sst_anomalies_1950-2021_GOA_BC_Coast.png", width = 6, height = 3)
 
-# version with just ecosystems of focus for salmon study
-just.dat <- ersst.dat %>%
-  filter(region %in% c("Gulf_of_Alaska", "British_Columbia_Coast"))
 
+## loop through each region and fit predicted FAR to observed sst ------------------
 
 file.list <- NA
 
@@ -57,12 +59,6 @@ for(i in 1:length(regions)){
 }
 
 
-
-
-
-
-
-# loop through each region and predict FAR for observed sst time series
 plot.predict <- data.frame()
 
 
