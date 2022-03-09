@@ -4,7 +4,7 @@ library(rstan)
 library(brms)
 library(bayesplot)
 library(tidyverse)
-
+cb <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 theme_set(theme_bw())
 
 ersst.dat <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv") 
@@ -13,9 +13,40 @@ ersst.dat <- ersst.dat %>%
   select(region, year, annual.anomaly.unsmoothed) %>%
   rename(annual.anomaly.1yr = annual.anomaly.unsmoothed)
 
-
 # get vectors of regions and files to loop through
 regions <- unique(ersst.dat$region)
+
+# plot anomaly time series for each region
+# put regions in order to plot
+plot.regions <- data.frame(region = regions,
+                           order = 1:6)
+
+ersst.dat <- left_join(ersst.dat, plot.regions)
+
+ersst.dat$region <- reorder(ersst.dat$region, ersst.dat$order)
+
+ggplot(ersst.dat, aes(year, annual.anomaly.1yr)) +
+  geom_line() +
+  facet_wrap(~region) +
+  ylab("Anomaly with respect to 1950-1999") +
+  theme(axis.title.x = element_blank()) +
+  geom_hline(yintercept = 0)
+
+ggsave("./CMIP6/figs/observed_sst_anomalies_1950-2021_by_region.png", width = 8, height = 4)
+
+ggplot(just.dat, aes(year, annual.anomaly.1yr, color = region)) +
+  geom_line() +
+  scale_color_manual(values = cb[c(2,6)]) +
+  ylab("Anomaly with respect to 1950-1999") +
+  theme(axis.title.x = element_blank()) +
+  geom_hline(yintercept = 0)
+
+ggsave("./CMIP6/figs/observed_sst_anomalies_1950-2021_GOA_BC_Coast.png", width = 6, height = 3)
+
+# version with just ecosystems of focus for salmon study
+just.dat <- ersst.dat %>%
+  filter(region %in% c("Gulf_of_Alaska", "British_Columbia_Coast"))
+
 
 file.list <- NA
 
@@ -24,6 +55,11 @@ for(i in 1:length(regions)){
   file.list[i] = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = "")
   
 }
+
+
+
+
+
 
 
 # loop through each region and predict FAR for observed sst time series
@@ -52,23 +88,19 @@ for(i in 1:length(regions)){
 
   # and plot
   plot.predict <- rbind(plot.predict, data.frame(region = regions[i],
-                           year = 1950:2021,
-                           estimate__ = colMeans(pred.far_1yr_base),
-                           lower_95 = apply(pred.far_1yr_base, 2, f_95_l),
-                           upper_95 = apply(pred.far_1yr_base, 2, f_95_u),
-                           lower_90 = apply(pred.far_1yr_base, 2, f_90_l),
-                           upper_90 = apply(pred.far_1yr_base, 2, f_90_u),
-                           lower_80 = apply(pred.far_1yr_base, 2, f_80_l),
-                           upper_80 = apply(pred.far_1yr_base, 2, f_80_u)))
-
+                            order = order,
+                            year = 1950:2021,
+                            estimate__ = colMeans(pred.far_1yr_base),
+                            lower_95 = apply(pred.far_1yr_base, 2, f_95_l),
+                            upper_95 = apply(pred.far_1yr_base, 2, f_95_u),
+                            lower_90 = apply(pred.far_1yr_base, 2, f_90_l),
+                            upper_90 = apply(pred.far_1yr_base, 2, f_90_u),
+                            lower_80 = apply(pred.far_1yr_base, 2, f_80_l),
+                            upper_80 = apply(pred.far_1yr_base, 2, f_80_u)))
 }
 
 # put regions in order
-plot.regions <- data.frame(region = regions,
-                           order = 1:6)
 
-
-plot.predict <- left_join(plot.predict, plot.regions)
 plot.predict$region <- reorder(plot.predict$region, plot.predict$order)
 
 ggplot(plot.predict) +
