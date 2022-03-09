@@ -50,7 +50,7 @@ hist(FAR$FAR.annual.1yr, breaks = 50)
 FAR$model_fac <- as.factor(FAR$model)
 
 ## Define model formula
-far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.03) ~ 
+far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.0) ~ 
                      s(annual.anomaly.1yr, k = 4) + (1 | model_fac))
 
 
@@ -65,12 +65,12 @@ for(i in 1:length(regions)){
   temp.FAR <- FAR %>%
     filter(region == regions[i])
   
-  ## base model - Gaussian distribution truncated at 1.03, each observation weighted by scaled model weight
+  ## base model - Gaussian distribution truncated at 1.0, each observation weighted by scaled model weight
   far_1yr_base <- brm(far_formula,
                       data = temp.FAR,
-                      cores = 4, chains = 4, iter = 7000,
+                      cores = 4, chains = 4, iter = 6000,
                       save_pars = save_pars(all = TRUE),
-                      control = list(adapt_delta = 0.9999, max_treedepth = 16))
+                      control = list(adapt_delta = 0.999, max_treedepth = 15))
   
   saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = ""))
   
@@ -89,8 +89,8 @@ for(i in 1:length(regions)){
 
 # loop through each model and run simple diagnostics
 
-# for(i in length(file.list)){
-  # i <- 6
+for(i in length(file.list)){
+  # i <- 1
   
   model.object <- readRDS(file = file.list[i])
   
@@ -102,7 +102,7 @@ for(i in 1:length(regions)){
   
   rhat_highest(model.object$fit)
   
-# }
+ }
 
 # the following model fits have issues to be addressed:
   
@@ -181,46 +181,9 @@ ggplot(plot.dat,
 
 ggsave("./CMIP6/figs/regional_far_annual_sst_anomaly_unsmoothed.png", width = 9, height = 6, units = 'in')
 
-# # predict
-# 
-# newdata <- obs.sst %>%
-#   select(year, sc.sst) %>%
-#   rename(anomaly.1yr = sc.sst)
-# 
-# pred.far_1yr_base <- posterior_epred(far_1yr_base, newdata = newdata, re_formula = NA, resp = "FAR.1yr")
-# 
-# # functions for different credible intervals
-# f_95_l <- function(x) quantile(x, 0.025)
-# f_95_u <- function(x) quantile(x, 0.975)
-# 
-# f_90_l <- function(x) quantile(x, 0.05)
-# f_90_u <- function(x) quantile(x, 0.95)
-# 
-# f_80_l <- function(x) quantile(x, 0.1)
-# f_80_u <- function(x) quantile(x, 0.9)
-# 
-# 
-# # and plot
-# plot.predict <- data.frame(year = 1950:2021,
-#                            estimate__ = colMeans(pred.far_1yr_base),
-#                            lower_95 = apply(pred.far_1yr_base, 2, f_95_l),
-#                            upper_95 = apply(pred.far_1yr_base, 2, f_95_u),
-#                            lower_90 = apply(pred.far_1yr_base, 2, f_90_l),
-#                            upper_90 = apply(pred.far_1yr_base, 2, f_90_u),
-#                            lower_80 = apply(pred.far_1yr_base, 2, f_80_l),
-#                            upper_80 = apply(pred.far_1yr_base, 2, f_80_u))
-# 
-# 
-# ggplot(plot.predict) +
-#   aes(x = year, y = estimate__) +
-#   geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
-#   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
-#   geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
-#   geom_line(size = 1, color = "red3") +
-#   labs(y = "Fraction of attributable risk", x = "SST anomaly") +
-#   theme_bw()
-# 
-# ggsave("./CMIP6/figs/predicted_far_1950-2021_far_1yr_base.png", width = 6, height = 4)
+
+
+
 # 
 # 
 # ## second model - base model + ar() term -----------------------
