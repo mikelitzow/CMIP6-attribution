@@ -65,7 +65,7 @@ for(i in 1:length(regions)){
   temp.FAR <- FAR %>%
     filter(region == regions[i])
   
-  ## base model - Gaussian distribution truncated at 1.04, each observation weighted by scaled model weight
+  ## base model - Gaussian distribution truncated at 1.03, each observation weighted by scaled model weight
   far_1yr_base <- brm(far_formula,
                       data = temp.FAR,
                       cores = 4, chains = 4, iter = 7000,
