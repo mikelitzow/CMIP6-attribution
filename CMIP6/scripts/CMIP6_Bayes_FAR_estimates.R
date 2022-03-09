@@ -68,7 +68,7 @@ for(i in 1:length(regions)){
   ## base model - Gaussian distribution truncated at 1.0, each observation weighted by scaled model weight
   far_1yr_base <- brm(far_formula,
                       data = temp.FAR,
-                      cores = 4, chains = 4, iter = 6000,
+                      cores = 4, chains = 4, iter = 7000,
                       save_pars = save_pars(all = TRUE),
                       control = list(adapt_delta = 0.999, max_treedepth = 15))
   
