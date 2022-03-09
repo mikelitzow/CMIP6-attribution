@@ -1,0 +1,83 @@
+# predict FAR for sst anomaly time series in each region
+
+library(rstan)
+library(brms)
+library(bayesplot)
+library(tidyverse)
+
+theme_set(theme_bw())
+
+ersst.dat <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv") 
+
+ersst.dat <- ersst.dat %>%
+  select(region, year, annual.anomaly.unsmoothed) %>%
+  rename(annual.anomaly.1yr = annual.anomaly.unsmoothed)
+
+
+# get vectors of regions and files to loop through
+regions <- unique(ersst.dat$region)
+
+file.list <- NA
+
+for(i in 1:length(regions)){
+  
+  file.list[i] = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = "")
+  
+}
+
+
+# loop through each region and predict FAR for observed sst time series
+plot.predict <- data.frame()
+
+
+for(i in 1:length(regions)){
+  
+  model <- readRDS(file.list[i])
+    
+  newdata <- ersst.dat %>%
+    filter(region == regions[i])
+
+  pred.far_1yr_base <- posterior_epred(model, newdata = newdata, re_formula = NA, resp = "FAR.annual.1yr")
+
+  # functions for different credible intervals
+  f_95_l <- function(x) quantile(x, 0.025)
+  f_95_u <- function(x) quantile(x, 0.975)
+
+  f_90_l <- function(x) quantile(x, 0.05)
+  f_90_u <- function(x) quantile(x, 0.95)
+
+  f_80_l <- function(x) quantile(x, 0.1)
+  f_80_u <- function(x) quantile(x, 0.9)
+
+
+  # and plot
+  plot.predict <- rbind(plot.predict, data.frame(region = regions[i],
+                           year = 1950:2021,
+                           estimate__ = colMeans(pred.far_1yr_base),
+                           lower_95 = apply(pred.far_1yr_base, 2, f_95_l),
+                           upper_95 = apply(pred.far_1yr_base, 2, f_95_u),
+                           lower_90 = apply(pred.far_1yr_base, 2, f_90_l),
+                           upper_90 = apply(pred.far_1yr_base, 2, f_90_u),
+                           lower_80 = apply(pred.far_1yr_base, 2, f_80_l),
+                           upper_80 = apply(pred.far_1yr_base, 2, f_80_u)))
+
+}
+
+# put regions in order
+plot.regions <- data.frame(region = regions,
+                           order = 1:6)
+
+
+plot.predict <- left_join(plot.predict, plot.regions)
+plot.predict$region <- reorder(plot.predict$region, plot.predict$order)
+
+ggplot(plot.predict) +
+  aes(x = year, y = estimate__) +
+  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+  geom_line(size = 1, color = "red3") +
+  facet_wrap(~region) + 
+  labs(y = "Fraction of attributable risk", x = "SST anomaly") 
+
+ggsave("./CMIP6/figs/predicted_far_1950-2021_far_1yr_base.png", width = 6, height = 4)
