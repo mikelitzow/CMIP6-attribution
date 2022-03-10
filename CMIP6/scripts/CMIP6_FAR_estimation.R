@@ -28,7 +28,7 @@ cmip.anom <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv")
 model.weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv") 
 
 # load estimated warming level timing for each model
-warming.timing <- read.csv("./CMIP6/summaries/model.north.pacific.warming.timing.csv")
+timing <- read.csv("./CMIP6/summaries/model.north.pacific.warming.timing.csv")
 
 # get vector of model names
 models <- unique(cmip.anom$model)
@@ -53,6 +53,14 @@ for(i in 1:length(models)){ # start i loop (models)
       filter(experiment == "piControl",
              model == models[i],
              region == regions[j])
+    
+    # pull "present" years (1950 to 1.0 degrees warming)
+    # note that this gives the same n for preindustrial and historical!
+    use = 1950:timing$year[timing$model == models[i] & timing$level == 1.0]
+    
+    # and limit pre.temp to these years
+    pre.temp <- pre.temp %>%
+      filter(year %in% use)
     
     ersst.temp <- ersst.anom %>%
       filter(region == regions[j])
