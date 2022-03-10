@@ -146,7 +146,7 @@ for(i in 1:length(regions)){
 # loop through each model and run simple diagnostics
 
 for(i in 1:length(file.list)){
-  # i <- 1
+  # i <- 3
   
   model.object <- readRDS(file = file.list[i])
   
