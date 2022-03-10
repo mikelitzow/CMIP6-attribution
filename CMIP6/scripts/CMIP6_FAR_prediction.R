@@ -63,7 +63,7 @@ plot.predict <- data.frame()
 
 
 for(i in 1:length(regions)){
-  
+  # i <- 1  
   model <- readRDS(file.list[i])
     
   newdata <- ersst.dat %>%
@@ -83,8 +83,8 @@ for(i in 1:length(regions)){
 
 
   # and plot
-  plot.predict <- rbind(plot.predict, data.frame(region = regions[i],
-                            order = order,
+  plot.predict <- rbind(plot.predict, data.frame(
+                            region = regions[i],
                             year = 1950:2021,
                             estimate__ = colMeans(pred.far_1yr_base),
                             lower_95 = apply(pred.far_1yr_base, 2, f_95_l),
@@ -96,6 +96,7 @@ for(i in 1:length(regions)){
 }
 
 # put regions in order
+plot.predict <- left_join(plot.predict, plot.regions)
 
 plot.predict$region <- reorder(plot.predict$region, plot.predict$order)
 
