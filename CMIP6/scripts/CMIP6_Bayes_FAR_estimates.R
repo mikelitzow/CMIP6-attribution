@@ -76,11 +76,47 @@ far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc
 
 
 # fit to remaining regions
+## refit GOA 
+  
+# subset temp.FAR
+temp.FAR <- FAR %>%
+    filter(region == "Gulf_of_Alaska") 
 
-## Define model formula
-far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.0) ~ 
+# examine FAR-model weight plots for high-anomaly years
+plot.high.FAR <- temp.FAR %>%
+  filter(annual.anomaly.1yr >= 2.5)
+
+ggplot(plot.high.FAR, aes(annual.weight, FAR.annual.1yr)) +
+  geom_point()
+
+plot.high.FAR$FAR.annual.1yr
+
+sum(plot.high.FAR$FAR.annual.1yr, na.rm = T) # 13 non-NAs, all are = 1
+# NAs indicate situation where no anomalies this large are observed in 
+# the modeled present
+
+# fitting model with increased upper bound and k = 4
+
+# define model formula
+far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.05) ~ 
                      s(annual.anomaly.1yr, k = 4) + (1 | model_fac))
-for(i in 3:length(regions)){
+
+## fit base model - Gaussian distribution truncated at 1.05, each observation weighted by scaled model weight
+  far_1yr_base <- brm(far_formula,
+                      data = temp.FAR,
+                      cores = 4, chains = 4, iter = 7000,
+                      save_pars = save_pars(all = TRUE),
+                      control = list(adapt_delta = 0.999, max_treedepth = 15))
+  
+  saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[3], ".rds", sep = ""))
+  
+
+  
+  ## refit NCC and SCC - increase adapt_delta
+  ## Define model formula
+  far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.0) ~ 
+                       s(annual.anomaly.1yr, k = 4) + (1 | model_fac))
+  for(i in 5:6){
   
   temp.FAR <- FAR %>%
     filter(region == regions[i])
@@ -90,12 +126,12 @@ for(i in 3:length(regions)){
                       data = temp.FAR,
                       cores = 4, chains = 4, iter = 7000,
                       save_pars = save_pars(all = TRUE),
-                      control = list(adapt_delta = 0.999, max_treedepth = 15))
+                      control = list(adapt_delta = 0.9999, max_treedepth = 15))
   
   saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = ""))
   
-}
-
+  }
+  
 ## run model diagnostics ---------------------
 
 # get list of model objects to load
@@ -109,7 +145,7 @@ for(i in 1:length(regions)){
 
 # loop through each model and run simple diagnostics
 
-for(i in length(file.list)){
+for(i in 1:length(file.list)){
   # i <- 1
   
   model.object <- readRDS(file = file.list[i])
