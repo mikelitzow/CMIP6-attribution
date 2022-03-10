@@ -99,7 +99,7 @@ sum(plot.high.FAR$FAR.annual.1yr, na.rm = T) # 13 non-NAs, all are = 1
 
 # define model formula
 far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.05) ~ 
-                     s(annual.anomaly.1yr, k = 4) + (1 | model_fac))
+                     s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
 
 ## fit base model - Gaussian distribution truncated at 1.05, each observation weighted by scaled model weight
   far_1yr_base <- brm(far_formula,
