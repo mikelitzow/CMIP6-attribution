@@ -90,7 +90,7 @@ for(i in 1:length(regions)){
 # loop through each model and run simple diagnostics
 
 for(i in length(file.list)){
-  # i <- 1
+  # i <-6
   
   model.object <- readRDS(file = file.list[i])
   
@@ -101,7 +101,8 @@ for(i in length(file.list)){
   neff_lowest(model.object$fit)
   
   rhat_highest(model.object$fit)
-  
+ 
+  summary(model.object) 
  }
 
 # the following model fits have issues to be addressed:
