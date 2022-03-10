@@ -49,18 +49,38 @@ hist(FAR$FAR.annual.1yr, breaks = 50)
 # setup variables - model as factor
 FAR$model_fac <- as.factor(FAR$model)
 
-## Define model formula
-far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.0) ~ 
-                     s(annual.anomaly.1yr, k = 4) + (1 | model_fac))
-
 
 ## fit: brms --------------------------------------
 
+# first, fit separately to North Pacific, using k = 5 (k = 4 did not fit! many divergent transitions, failed convergence)
+# Define model formula
 
-# loop through regions
+# set up vector of regions
 regions <- unique(FAR$region)
 
-for(i in 1:length(regions)){
+far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.01) ~ 
+                     s(annual.anomaly.1yr, k = 5) + (1 | model_fac))
+
+  temp.FAR <- FAR %>%
+    filter(region == regions[1])
+  
+  ## base model - Gaussian distribution truncated at 1.0, each observation weighted by scaled model weight
+  far_1yr_base <- brm(far_formula,
+                      data = temp.FAR,
+                      cores = 4, chains = 4, iter = 7000,
+                      save_pars = save_pars(all = TRUE),
+                      control = list(adapt_delta = 0.999, max_treedepth = 15))
+  
+  saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = ""))
+  
+
+
+# fit to remaining regions
+
+## Define model formula
+far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.0) ~ 
+                     s(annual.anomaly.1yr, k = 4) + (1 | model_fac))
+for(i in 3:length(regions)){
   
   temp.FAR <- FAR %>%
     filter(region == regions[i])
@@ -90,7 +110,7 @@ for(i in 1:length(regions)){
 # loop through each model and run simple diagnostics
 
 for(i in length(file.list)){
-  # i <-6
+  # i <- 1
   
   model.object <- readRDS(file = file.list[i])
   
@@ -101,8 +121,7 @@ for(i in length(file.list)){
   neff_lowest(model.object$fit)
   
   rhat_highest(model.object$fit)
- 
-  summary(model.object) 
+  
  }
 
 # the following model fits have issues to be addressed:
