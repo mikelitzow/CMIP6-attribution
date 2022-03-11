@@ -95,10 +95,41 @@ sum(plot.high.FAR$FAR.annual.1yr, na.rm = T) # 13 non-NAs, all are = 1
 # NAs indicate situation where no anomalies this large are observed in 
 # the modeled present
 
+# try one more plot
+temp.FAR$model_weight <- temp.FAR$annual.weight
+
+check.plot <- temp.FAR %>%
+  select(annual.anomaly.1yr, preind.prob.annual.1yr, hist.prob.annual.1yr, model_weight, FAR.annual.1yr) %>%
+  pivot_longer(cols = c(-annual.anomaly.1yr, -model_weight))
+
+# order
+plot.order <- data.frame(name = unique(check.plot$name),
+                         order = 1:3)
+
+check.plot <- left_join(check.plot, plot.order)
+  
+check.plot$name <- reorder(check.plot$name, check.plot$order)
+
+ggplot(check.plot, aes(annual.anomaly.1yr, value)) +
+  geom_point(size = check.plot$model_weight, alpha = 0.1) +
+  facet_wrap(~name, ncol = 1, scale = "free_y")
+
+ggsave("./CMIP6/figs/GOA_probabilities_and_FAR.png", width = 4, height = 8, units = 'in')
+
+check <- temp.FAR %>%
+  select(model, ersst.year, annual.anomaly.1yr, preind.prob.annual.1yr, hist.prob.annual.1yr, FAR.annual.1yr) %>%
+  arrange(FAR.annual.1yr)
+
+View(check)
+
 # fitting model with increased upper bound and k = 4
 
 # define model formula
 far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.05) ~ 
+                     s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
+
+# experimental!
+far_formula <-  bf((preind.prob.annual.1yr / hist.prob.annual.1yr) | weights(annual.weight, scale = TRUE) ~ 
                      s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
 
 ## fit base model - Gaussian distribution truncated at 1.05, each observation weighted by scaled model weight
