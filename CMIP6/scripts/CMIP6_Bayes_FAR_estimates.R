@@ -128,9 +128,19 @@ View(check)
 far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.05) ~ 
                      s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
 
-# experimental!
+# experimental! (doesn't work!)
 far_formula <-  bf((preind.prob.annual.1yr / hist.prob.annual.1yr) | weights(annual.weight, scale = TRUE) ~ 
                      s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
+
+# try multivariate model
+experimental <- brm(
+  mvbind(preind.prob.annual.1yr, hist.prob.annual.1yr) | weights(annual.weight, scale = TRUE) ~
+    s(annual.anomaly.1yr, k = 5) + (1 | model_fac),
+data = temp.FAR,
+cores = 4, chains = 4, iter = 7000,
+save_pars = save_pars(all = TRUE),
+control = list(adapt_delta = 0.999, max_treedepth = 15)
+)
 
 ## fit base model - Gaussian distribution truncated at 1.05, each observation weighted by scaled model weight
   far_1yr_base <- brm(far_formula,
