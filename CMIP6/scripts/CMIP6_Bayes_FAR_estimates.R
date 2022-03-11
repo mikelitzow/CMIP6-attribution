@@ -157,7 +157,7 @@ experimental <- brm(
     s(annual.anomaly.1yr, k = 5) + (1 | p | model_fac),
 data = temp.FAR,
 family = Beta(),
-cores = 4, chains = 4, iter = 7000,
+cores = 4, chains = 2, iter = 1000,
 save_pars = save_pars(all = TRUE),
 control = list(adapt_delta = 0.999, max_treedepth = 15)
 )
