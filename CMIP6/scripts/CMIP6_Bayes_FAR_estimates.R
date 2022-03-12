@@ -33,54 +33,66 @@ hist(FAR$annual.weight, breaks = 8)
 
 sum(is.na(FAR$winter.weight)) # ok
 hist(FAR$winter.weight, breaks = 8)
-
-# look at distribution of 2016 and 2019 estimates
-check <- FAR$FAR.annual.1yr[FAR$ersst.year %in% c(2016, 2019)]
-
-hist(check, breaks = 40)
-
-### fit Bayesian regression to estimate across CMIP models----------------------
-
-## Check distribution --------------------------
-hist(FAR$FAR.annual.1yr, breaks = 50)
-
+# # experimental - logistic model that will then support
+# # posterior estimates of FAR
+# 
+# # load preindustrial and historical outcome for the GOA
+# preindustrial <- read.csv("./CMIP6/summaries/Gulf_of_Alaska_preindustrial_outcomes.csv")
+# historical <- read.csv("./CMIP6/summaries/Gulf_of_Alaska_historical_outcomes.csv")
+# 
+# # combine
+# outcomes <- rbind(preindustrial, historical)
+# 
+# # plot to check
+# ggplot(outcomes, aes(annual.anomaly.1yr, annual.1yr.events)) +
+#   geom_point(alpha = 0.1) +
+#   facet_wrap(~period)
+# 
+# # load model weights (based on ar(1), correlation, bias)
+# weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv")
+# 
+# weights <- weights %>%
+#   filter(window == "annual",
+#          region == "Gulf_of_Alaska") %>%
+#   select(model, scaled.total.weight) %>%
+#   rename(model_weight = scaled.total.weight)
+# 
+# outcomes <- left_join(outcomes, weights)
+# 
 ## brms: setup ---------------------------------------------
 
-# setup variables - model as factor
-FAR$model_fac <- as.factor(FAR$model)
+# # setup variables - model as factor
+# outcomes$model_fac <- as.factor(outcomes$model)
+# 
+# ## fit: brms --------------------------------------
+# 
+# # Define model formula
+# 
+# far_formula <-  bf(annual.1yr.events | weights(model_weight, scale = TRUE) ~
+#                      s(annual.anomaly.1yr, by = period, k = 6) + period + (1 | model_fac))
+# 
+# far_brms <- brm(far_formula,
+#                     data = outcomes,
+#                     family = bernoulli(link = "logit"),
+#                     cores = 4, chains = 4, iter = 3000,
+#                     save_pars = save_pars(all = TRUE),
+#                     control = list(adapt_delta = 0.999, max_treedepth = 15))
+# 
+# saveRDS(far_brms, "./CMIP6/brms_output/Gulf_of_Alaska_binomial.rds")
 
-
-## fit: brms --------------------------------------
-
-# first, fit separately to North Pacific, using k = 5 (k = 4 did not fit! many divergent transitions, failed convergence)
-# Define model formula
-
-# set up vector of regions
-regions <- unique(FAR$region)
-
-far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.01) ~ 
-                     s(annual.anomaly.1yr, k = 5) + (1 | model_fac))
-
-  temp.FAR <- FAR %>%
-    filter(region == regions[1])
-  
-  ## base model - Gaussian distribution truncated at 1.0, each observation weighted by scaled model weight
-  far_1yr_base <- brm(far_formula,
-                      data = temp.FAR,
-                      cores = 4, chains = 4, iter = 7000,
-                      save_pars = save_pars(all = TRUE),
-                      control = list(adapt_delta = 0.999, max_treedepth = 15))
-  
-  saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = ""))
-  
 
 
 # fit to remaining regions
-## refit GOA 
-  
+## refit GOA
+
 # subset temp.FAR
 temp.FAR <- FAR %>%
-    filter(region == "Gulf_of_Alaska") 
+    filter(region == "Gulf_of_Alaska")
+
+
+
+
+
 
 # examine FAR-model weight plots for high-anomaly years
 plot.high.FAR <- temp.FAR %>%
@@ -92,7 +104,7 @@ ggplot(plot.high.FAR, aes(annual.weight, FAR.annual.1yr)) +
 plot.high.FAR$FAR.annual.1yr
 
 sum(plot.high.FAR$FAR.annual.1yr, na.rm = T) # 13 non-NAs, all are = 1
-# NAs indicate situation where no anomalies this large are observed in 
+# NAs indicate situation where no anomalies this large are observed in
 # the modeled present
 
 # try one more plot
@@ -107,7 +119,7 @@ plot.order <- data.frame(name = unique(check.plot$name),
                          order = 1:3)
 
 check.plot <- left_join(check.plot, plot.order)
-  
+
 check.plot$name <- reorder(check.plot$name, check.plot$order)
 
 ggplot(check.plot, aes(annual.anomaly.1yr, value)) +
@@ -123,14 +135,14 @@ check <- temp.FAR %>%
 View(check)
 
 # fitting model with increased upper bound and k = 4
-
-# define model formula
-far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.05) ~ 
-                     s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
-
-# experimental! (doesn't work!)
-far_formula <-  bf((preind.prob.annual.1yr / hist.prob.annual.1yr) | weights(annual.weight, scale = TRUE) ~ 
-                     s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
+# 
+# # define model formula
+# far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.05) ~
+#                      s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
+# 
+# # experimental! (doesn't work!)
+# far_formula <-  bf((preind.prob.annual.1yr / hist.prob.annual.1yr) | weights(annual.weight, scale = TRUE) ~
+#                      s(annual.anomaly.1yr, k = 3) + (1 | model_fac))
 
 # try multivariate model
 
@@ -151,158 +163,183 @@ temp.FAR$hist.prob.annual.1yr[change] = 0.0001
 change <- temp.FAR$hist.prob.annual.1yr == 1
 temp.FAR$hist.prob.annual.1yr[change] = 0.9999
 
+# new experimental version
+# pivot longer 
 
-experimental <- brm(
-  mvbind(preind.prob.annual.1yr, hist.prob.annual.1yr) | weights(annual.weight, scale = TRUE) ~
-    s(annual.anomaly.1yr, k = 5) + (1 | p | model_fac),
-data = temp.FAR,
-family = Beta(),
-cores = 4, chains = 2, iter = 1000,
-save_pars = save_pars(all = TRUE),
-control = list(adapt_delta = 0.999, max_treedepth = 15)
-)
+temp.FAR <- temp.FAR %>%
+  mutate(model_fac = as.factor(model)) %>%
+  select(model_fac, model_weight, annual.anomaly.1yr, preind.prob.annual.1yr, hist.prob.annual.1yr) %>%
+  rename(preindustrial = preind.prob.annual.1yr,
+         historical = hist.prob.annual.1yr) %>%
+  pivot_longer(cols = c(-model_fac, -model_weight, -annual.anomaly.1yr), names_to = "period", values_to = "probability")
 
 
-saveRDS(experimental, file ="./CMIP6/brms_output/GOA_beta_multinomial.rds")
+far_formula <-  bf(probability | weights(model_weight, scale = TRUE) ~
+                     s(annual.anomaly.1yr, by = period, k = 5) + period + (1 | model_fac))
 
-## fit base model - Gaussian distribution truncated at 1.05, each observation weighted by scaled model weight
-  far_1yr_base <- brm(far_formula,
-                      data = temp.FAR,
-                      cores = 4, chains = 4, iter = 7000,
-                      save_pars = save_pars(all = TRUE),
-                      control = list(adapt_delta = 0.999, max_treedepth = 15))
-  
-  saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[3], ".rds", sep = ""))
-  
 
-  
-  ## refit NCC and SCC - increase adapt_delta
-  ## Define model formula
-  far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.0) ~ 
-                       s(annual.anomaly.1yr, k = 4) + (1 | model_fac))
-  for(i in 5:6){
-  
-  temp.FAR <- FAR %>%
-    filter(region == regions[i])
-  
-  ## base model - Gaussian distribution truncated at 1.0, each observation weighted by scaled model weight
-  far_1yr_base <- brm(far_formula,
-                      data = temp.FAR,
-                      cores = 4, chains = 4, iter = 7000,
-                      save_pars = save_pars(all = TRUE),
-                      control = list(adapt_delta = 0.9999, max_treedepth = 15))
-  
-  saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = ""))
-  
-  }
-  
-## run model diagnostics ---------------------
+experimental <- brm(far_formula,
+                    data = temp.FAR,
+                    family = Beta(),
+                    cores = 4, chains = 4, iter = 3000,
+                    save_pars = save_pars(all = TRUE),
+                    control = list(adapt_delta = 0.9999, max_treedepth = 15))
 
-# get list of model objects to load
+saveRDS(experimental, "./CMIP6/brms_output/experimental_GOA.rds")
 
-file.list <- NA
-for(i in 1:length(regions)){
-  
-  file.list[i] = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = "")
-  
-}
 
-# loop through each model and run simple diagnostics
-
-for(i in 1:length(file.list)){
-  # i <- 3
-  
-  model.object <- readRDS(file = file.list[i])
-  
-  print(regions[i])
-  
-  check_hmc_diagnostics(model.object$fit)
-  
-  neff_lowest(model.object$fit)
-  
-  rhat_highest(model.object$fit)
-  
- }
-
-# the following model fits have issues to be addressed:
-  
-  # NCC (5) and SSC (6) have divergent transitions
-  
-  # NPac (1), EBS(2), BC(4), NCC (5), and SCC (6) have effective sample sizes < 1000 
-  
-#   
-# check_hmc_diagnostics(far_1yr_base$fit)
-# neff_lowest(far_1yr_base$fit)
-# rhat_highest(far_1yr_base$fit)
-# summary(far_1yr_base)
-# bayes_R2(far_1yr_base)
 # 
-# plot(conditional_smooths(far_1yr_base), ask = FALSE)
-
-# y <- as.vector(na.omit(FAR$FAR.1yr)) # this does not account for weights - need to check that
-# yrep_far_1yr_base  <- fitted(far_1yr_base, scale = "response", summary = FALSE)
-# ppc_dens_overlay(y = y, yrep = yrep_far_1yr_base[sample(nrow(yrep_far_1yr_base), 25), ]) +
-#   ggtitle("far_1yr_base.3")
-
-## Plot predicted FAR-SST relationships ---------------------------------------
-  
-plot.dat <- data.frame()
-
-for(i in 1:length(file.list)){
-  # i <- 1
-  
-  model.object <- readRDS(file = file.list[i])
-  
-## SST anomaly predictions #### 95% CI
-ce1s_1 <- conditional_effects(model.object, effect = "annual.anomaly.1yr", re_formula = NA,
-                              probs = c(0.025, 0.975))
-## 90% CI
-ce1s_2 <- conditional_effects(model.object, effect = "annual.anomaly.1yr", re_formula = NA,
-                              probs = c(0.05, 0.95))
-## 80% CI
-ce1s_3 <- conditional_effects(model.object, effect = "annual.anomaly.1yr", re_formula = NA,
-                              probs = c(0.1, 0.9))
-dat_ce <- ce1s_1$annual.anomaly.1yr
-dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
-dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
-dat_ce[["upper_90"]] <- ce1s_2$annual.anomaly.1yr[["upper__"]]
-dat_ce[["lower_90"]] <- ce1s_2$annual.anomaly.1yr[["lower__"]]
-dat_ce[["upper_80"]] <- ce1s_3$annual.anomaly.1yr[["upper__"]]
-dat_ce[["lower_80"]] <- ce1s_3$annual.anomaly.1yr[["lower__"]]
-
-
-dat_ce$region <- regions[i]
-
-  plot.dat <- rbind(plot.dat,
-                    dat_ce)
-
-
-
-}
-
-# put regions in order
-plot.regions <- data.frame(region = regions,
-                           order = 1:6)
-
-
-plot.dat <- left_join(plot.dat, plot.regions)
-plot.dat$region <- reorder(plot.dat$region, plot.dat$order)
-
-ggplot(plot.dat,
-  aes(x = effect1__, y = estimate__)) +
-  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
-  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
-  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
-  geom_line(size = 1, color = "red3") +
-  labs(y = "Fraction of attributable risk", x = "SST anomaly") +
-  facet_wrap(~region) +
-  theme_bw()
-
-
-ggsave("./CMIP6/figs/regional_far_annual_sst_anomaly_unsmoothed.png", width = 9, height = 6, units = 'in')
-
-
-
+# experimental <- brm(
+#   mvbind(preind.prob.annual.1yr, hist.prob.annual.1yr) | weights(annual.weight, scale = TRUE) ~
+#     s(annual.anomaly.1yr, k = 5) + (1 | p | model_fac),
+# data = temp.FAR,
+# family = Beta(),
+# cores = 4, chains = 2, iter = 1000,
+# save_pars = save_pars(all = TRUE),
+# control = list(adapt_delta = 0.999, max_treedepth = 15)
+# )
+# 
+# 
+# saveRDS(experimental, file ="./CMIP6/brms_output/GOA_beta_multinomial.rds")
+# 
+# ## fit base model - Gaussian distribution truncated at 1.05, each observation weighted by scaled model weight
+#   far_1yr_base <- brm(far_formula,
+#                       data = temp.FAR,
+#                       cores = 4, chains = 4, iter = 7000,
+#                       save_pars = save_pars(all = TRUE),
+#                       control = list(adapt_delta = 0.999, max_treedepth = 15))
+#   
+#   saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[3], ".rds", sep = ""))
+#   
+# 
+#   
+#   ## refit NCC and SCC - increase adapt_delta
+#   ## Define model formula
+#   far_formula <-  bf(FAR.annual.1yr | weights(annual.weight, scale = TRUE) + trunc(ub = 1.0) ~ 
+#                        s(annual.anomaly.1yr, k = 4) + (1 | model_fac))
+#   for(i in 5:6){
+#   
+#   temp.FAR <- FAR %>%
+#     filter(region == regions[i])
+#   
+#   ## base model - Gaussian distribution truncated at 1.0, each observation weighted by scaled model weight
+#   far_1yr_base <- brm(far_formula,
+#                       data = temp.FAR,
+#                       cores = 4, chains = 4, iter = 7000,
+#                       save_pars = save_pars(all = TRUE),
+#                       control = list(adapt_delta = 0.9999, max_treedepth = 15))
+#   
+#   saveRDS(far_1yr_base, file = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = ""))
+#   
+#   }
+#   
+# ## run model diagnostics ---------------------
+# 
+# # get list of model objects to load
+# 
+# file.list <- NA
+# for(i in 1:length(regions)){
+#   
+#   file.list[i] = paste("./CMIP6/brms_output/far_1yr_annual_base_", regions[i], ".rds", sep = "")
+#   
+# }
+# 
+# # loop through each model and run simple diagnostics
+# 
+# for(i in 1:length(file.list)){
+#   # i <- 3
+#   
+#   model.object <- readRDS(file = file.list[i])
+#   
+#   print(regions[i])
+#   
+#   check_hmc_diagnostics(model.object$fit)
+#   
+#   neff_lowest(model.object$fit)
+#   
+#   rhat_highest(model.object$fit)
+#   
+#  }
+# 
+# # the following model fits have issues to be addressed:
+#   
+#   # NCC (5) and SSC (6) have divergent transitions
+#   
+#   # NPac (1), EBS(2), BC(4), NCC (5), and SCC (6) have effective sample sizes < 1000 
+#   
+# #   
+# # check_hmc_diagnostics(far_1yr_base$fit)
+# # neff_lowest(far_1yr_base$fit)
+# # rhat_highest(far_1yr_base$fit)
+# # summary(far_1yr_base)
+# # bayes_R2(far_1yr_base)
+# # 
+# # plot(conditional_smooths(far_1yr_base), ask = FALSE)
+# 
+# # y <- as.vector(na.omit(FAR$FAR.1yr)) # this does not account for weights - need to check that
+# # yrep_far_1yr_base  <- fitted(far_1yr_base, scale = "response", summary = FALSE)
+# # ppc_dens_overlay(y = y, yrep = yrep_far_1yr_base[sample(nrow(yrep_far_1yr_base), 25), ]) +
+# #   ggtitle("far_1yr_base.3")
+# 
+# ## Plot predicted FAR-SST relationships ---------------------------------------
+#   
+# plot.dat <- data.frame()
+# 
+# for(i in 1:length(file.list)){
+#   # i <- 1
+#   
+#   model.object <- readRDS(file = file.list[i])
+#   
+# ## SST anomaly predictions #### 95% CI
+# ce1s_1 <- conditional_effects(model.object, effect = "annual.anomaly.1yr", re_formula = NA,
+#                               probs = c(0.025, 0.975))
+# ## 90% CI
+# ce1s_2 <- conditional_effects(model.object, effect = "annual.anomaly.1yr", re_formula = NA,
+#                               probs = c(0.05, 0.95))
+# ## 80% CI
+# ce1s_3 <- conditional_effects(model.object, effect = "annual.anomaly.1yr", re_formula = NA,
+#                               probs = c(0.1, 0.9))
+# dat_ce <- ce1s_1$annual.anomaly.1yr
+# dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
+# dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
+# dat_ce[["upper_90"]] <- ce1s_2$annual.anomaly.1yr[["upper__"]]
+# dat_ce[["lower_90"]] <- ce1s_2$annual.anomaly.1yr[["lower__"]]
+# dat_ce[["upper_80"]] <- ce1s_3$annual.anomaly.1yr[["upper__"]]
+# dat_ce[["lower_80"]] <- ce1s_3$annual.anomaly.1yr[["lower__"]]
+# 
+# 
+# dat_ce$region <- regions[i]
+# 
+#   plot.dat <- rbind(plot.dat,
+#                     dat_ce)
+# 
+# 
+# 
+# }
+# 
+# # put regions in order
+# plot.regions <- data.frame(region = regions,
+#                            order = 1:6)
+# 
+# 
+# plot.dat <- left_join(plot.dat, plot.regions)
+# plot.dat$region <- reorder(plot.dat$region, plot.dat$order)
+# 
+# ggplot(plot.dat,
+#   aes(x = effect1__, y = estimate__)) +
+#   geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+#   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+#   geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+#   geom_line(size = 1, color = "red3") +
+#   labs(y = "Fraction of attributable risk", x = "SST anomaly") +
+#   facet_wrap(~region) +
+#   theme_bw()
+# 
+# 
+# ggsave("./CMIP6/figs/regional_far_annual_sst_anomaly_unsmoothed.png", width = 9, height = 6, units = 'in')
+# 
+# 
+# 
 
 # 
 # 
