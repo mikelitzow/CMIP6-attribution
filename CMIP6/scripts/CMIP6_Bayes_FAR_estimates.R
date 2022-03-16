@@ -4,12 +4,13 @@ library(rstan)
 library(brms)
 library(bayesplot)
 library(tidyverse)
+library(tidybayes)
 
 source("./CMIP6/scripts/stan_utils.R")
 
 theme_set(theme_bw())
 
-## set up for brms modeling ----------------------------------
+## data prep ----------------------------------
 
 # load FAR estimates
 FAR.estimates <- read.csv("./CMIP6/summaries/FAR_estimates.csv")
@@ -152,16 +153,16 @@ View(check)
 names(temp.FAR)
 
 change <- temp.FAR$preind.prob.annual.1yr == 0
-temp.FAR$preind.prob.annual.1yr[change] = 0.0001
+temp.FAR$preind.prob.annual.1yr[change] = 0.00001
 
 change <- temp.FAR$preind.prob.annual.1yr == 1
-temp.FAR$preind.prob.annual.1yr[change] = 0.9999
+temp.FAR$preind.prob.annual.1yr[change] = 0.99999
 
 change <- temp.FAR$hist.prob.annual.1yr == 0
-temp.FAR$hist.prob.annual.1yr[change] = 0.0001
+temp.FAR$hist.prob.annual.1yr[change] = 0.00001
 
 change <- temp.FAR$hist.prob.annual.1yr == 1
-temp.FAR$hist.prob.annual.1yr[change] = 0.9999
+temp.FAR$hist.prob.annual.1yr[change] = 0.99999
 
 # new experimental version
 # pivot longer 
@@ -175,17 +176,134 @@ temp.FAR <- temp.FAR %>%
 
 
 far_formula <-  bf(probability | weights(model_weight, scale = TRUE) ~
-                     s(annual.anomaly.1yr, by = period, k = 5) + period + (1 | model_fac))
+                     s(annual.anomaly.1yr, by = period) + period + (1 | model_fac))
 
 
 experimental <- brm(far_formula,
                     data = temp.FAR,
                     family = Beta(),
-                    cores = 4, chains = 4, iter = 3000,
+                    cores = 4, chains = 4, iter = 7000,
                     save_pars = save_pars(all = TRUE),
-                    control = list(adapt_delta = 0.9999, max_treedepth = 15))
+                    control = list(adapt_delta = 0.999, max_treedepth = 15))
 
 saveRDS(experimental, "./CMIP6/brms_output/experimental_GOA.rds")
+
+
+experimental <- readRDS("./CMIP6/brms_output/experimental_GOA.rds")
+
+check_hmc_diagnostics(experimental$fit)
+neff_lowest(experimental$fit) # needs ~ 6000 iterations
+rhat_highest(experimental$fit)
+summary(experimental)
+bayes_R2(experimental) # wow - 0.98!
+trace_plot(experimental$fit) # think that's good!
+
+y <- as.vector(na.omit(temp.FAR$probability)) # this does not account for weights - need to check that
+yrep_experimental  <- fitted(experimental, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_experimental[sample(nrow(yrep_experimental), 25), ]) +
+  ggtitle("experimental GOA") # this needs to be evaluated
+
+## Plot predicted probabilities  ---------------------------------------
+
+## SST anomaly predictions #### 95% CI
+ce1s_1 <- conditional_effects(experimental, "annual.anomaly.1yr:period", re_formula = NA,
+                              probs = c(0.025, 0.975))
+
+ce1s_1
+
+
+# calculate historical and preindustrial probabilities from posteriors
+
+# load ersst
+
+get_variables(experimental)
+
+
+
+ersst <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
+
+ersst <- ersst %>%
+  filter(region == "Gulf_of_Alaska")
+
+new.dat.historical <- data.frame(period = "historical",
+                                year = ersst$year,
+                                annual.anomaly.1yr = ersst$annual.anomaly.unsmoothed)
+
+new.dat.preindustrial <- data.frame(period = "preindustrial",
+                                 year = ersst$year,
+                                 annual.anomaly.1yr = ersst$annual.anomaly.unsmoothed)
+
+posterior.predict.historical <- posterior_epred( # use posterior+pred to include residual variance
+  experimental, newdata = new.dat.historical,
+  re_formula= NA, # exclude group-level terms
+  response = annual.anomaly.1yr
+)
+
+
+posterior.predict.preindustrial <- posterior_epred( # use posterior+pred to include residual variance
+  experimental, newdata = new.dat.historical,
+  re_formula= NA, # exclude group-level terms
+  response = annual.anomaly.1yr
+)
+
+
+posterior.far <- 1 - (posterior.predict.preindustrial / posterior.predict.historical)
+
+
+dim(posterior.far)
+
+
+
+# calculate FAR:
+# 1 - (rows 73:144 / rows 1:72)
+
+posterior.far <-  1 - (posterior.predict[,73:144] / posterior.predict[,1:72])
+
+
+dim(posterior.far)
+
+# functions for different credible intervals
+f_median <- function(x) median(x)
+
+f_95_l <- function(x) quantile(x, 0.025)
+f_95_u <- function(x) quantile(x, 0.975)
+
+f_90_l <- function(x) quantile(x, 0.05)
+f_90_u <- function(x) quantile(x, 0.95)
+
+f_80_l <- function(x) quantile(x, 0.1)
+f_80_u <- function(x) quantile(x, 0.9)
+
+
+# and plot
+plot.predict <- data.frame(
+  region = "Gulf of Alaska",
+  year = 1950:2021,
+  estimate__ = apply(posterior.far, 2, f_median),
+  lower_95 = apply(posterior.far, 2, f_95_l),
+  upper_95 = apply(posterior.far, 2, f_95_u),
+  lower_90 = apply(posterior.far, 2, f_90_l),
+  upper_90 = apply(posterior.far, 2, f_90_u),
+  lower_80 = apply(posterior.far, 2, f_80_l),
+  upper_80 = apply(posterior.far, 2, f_80_u))
+
+
+# put regions in order
+plot.predict <- left_join(plot.predict, plot.regions)
+
+plot.predict$region <- reorder(plot.predict$region, plot.predict$order)
+
+ggplot(plot.predict) +
+  aes(x = year, y = estimate__) +
+  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+  geom_line(size = 1, color = "red3") +
+  facet_wrap(~region) + 
+  labs(y = "Fraction of attributable risk", x = "SST anomaly") +
+  coord_cartesian(ylim = c(-0.1, 1))
+
+ggsave("./CMIP6/figs/predicted_far_1950-2021_far_1yr_base.png", width = 6, height = 4)
 
 
 # 
@@ -273,7 +391,7 @@ saveRDS(experimental, "./CMIP6/brms_output/experimental_GOA.rds")
 # # rhat_highest(far_1yr_base$fit)
 # # summary(far_1yr_base)
 # # bayes_R2(far_1yr_base)
-# # 
+# #
 # # plot(conditional_smooths(far_1yr_base), ask = FALSE)
 # 
 # # y <- as.vector(na.omit(FAR$FAR.1yr)) # this does not account for weights - need to check that
@@ -282,14 +400,14 @@ saveRDS(experimental, "./CMIP6/brms_output/experimental_GOA.rds")
 # #   ggtitle("far_1yr_base.3")
 # 
 # ## Plot predicted FAR-SST relationships ---------------------------------------
-#   
+# 
 # plot.dat <- data.frame()
 # 
 # for(i in 1:length(file.list)){
 #   # i <- 1
-#   
+# 
 #   model.object <- readRDS(file = file.list[i])
-#   
+# 
 # ## SST anomaly predictions #### 95% CI
 # ce1s_1 <- conditional_effects(model.object, effect = "annual.anomaly.1yr", re_formula = NA,
 #                               probs = c(0.025, 0.975))
@@ -306,7 +424,7 @@ saveRDS(experimental, "./CMIP6/brms_output/experimental_GOA.rds")
 # dat_ce[["lower_90"]] <- ce1s_2$annual.anomaly.1yr[["lower__"]]
 # dat_ce[["upper_80"]] <- ce1s_3$annual.anomaly.1yr[["upper__"]]
 # dat_ce[["lower_80"]] <- ce1s_3$annual.anomaly.1yr[["lower__"]]
-# 
+
 # 
 # dat_ce$region <- regions[i]
 # 
