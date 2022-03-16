@@ -104,16 +104,16 @@ View(check)
 names(temp.FAR)
 
 change <- temp.FAR$preind.prob.annual.1yr == 0
-temp.FAR$preind.prob.annual.1yr[change] = 0.00001
+temp.FAR$preind.prob.annual.1yr[change] = 0.00000001
 
 change <- temp.FAR$preind.prob.annual.1yr == 1
-temp.FAR$preind.prob.annual.1yr[change] = 0.99999
+temp.FAR$preind.prob.annual.1yr[change] = 0.99999999
 
 change <- temp.FAR$hist.prob.annual.1yr == 0
-temp.FAR$hist.prob.annual.1yr[change] = 0.00001
+temp.FAR$hist.prob.annual.1yr[change] = 0.00000001
 
 change <- temp.FAR$hist.prob.annual.1yr == 1
-temp.FAR$hist.prob.annual.1yr[change] = 0.99999
+temp.FAR$hist.prob.annual.1yr[change] = 0.99999999
 
 # new experimental version
 # pivot longer 
@@ -133,7 +133,7 @@ far_formula <-  bf(probability | weights(model_weight, scale = TRUE) ~
 experimental <- brm(far_formula,
                     data = temp.FAR,
                     family = Beta(),
-                    cores = 4, chains = 4, iter = 7000,
+                    cores = 4, chains = 4, iter = 4000,
                     save_pars = save_pars(all = TRUE),
                     control = list(adapt_delta = 0.999, max_treedepth = 15))
 
@@ -160,16 +160,18 @@ ppc_dens_overlay(y = y, yrep = yrep_experimental[sample(nrow(yrep_experimental),
 ce1s_1 <- conditional_effects(experimental, "annual.anomaly.1yr:period", re_formula = NA,
                               probs = c(0.025, 0.975))
 
-ce1s_1
+print(ce1s_1)
+
+
+View(filter(ce1s_1$`annual.anomaly.1yr:period`, annual.anomaly.1yr > 2.5))
+
+
+# estimate FAR directly from these 
 
 
 # calculate historical and preindustrial probabilities from posteriors
 
 # load ersst
-
-get_variables(experimental)
-
-
 
 ersst <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
@@ -184,34 +186,18 @@ new.dat.preindustrial <- data.frame(period = "preindustrial",
                                  year = ersst$year,
                                  annual.anomaly.1yr = ersst$annual.anomaly.unsmoothed)
 
-posterior.predict.historical <- posterior_epred( # use posterior+pred to include residual variance
+posterior.predict.historical <- posterior_epred(
   experimental, newdata = new.dat.historical,
-  re_formula= NA, # exclude group-level terms
-  response = annual.anomaly.1yr
+  re_formula= NA # exclude group-level terms
 )
 
 
 posterior.predict.preindustrial <- posterior_epred( # use posterior+pred to include residual variance
-  experimental, newdata = new.dat.historical,
-  re_formula= NA, # exclude group-level terms
-  response = annual.anomaly.1yr
+  experimental, newdata = new.dat.preindustrial,
+  re_formula= NA # exclude group-level terms
 )
 
-
-posterior.far <- 1 - (posterior.predict.preindustrial / posterior.predict.historical)
-
-
-dim(posterior.far)
-
-
-
-# calculate FAR:
-# 1 - (rows 73:144 / rows 1:72)
-
-posterior.far <-  1 - (posterior.predict[,73:144] / posterior.predict[,1:72])
-
-
-dim(posterior.far)
+posterior.far <-  1 - posterior.predict.preindustrial / posterior.predict.historical
 
 # functions for different credible intervals
 f_median <- function(x) median(x)
