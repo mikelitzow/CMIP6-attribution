@@ -79,33 +79,72 @@ plot(ce, ask = FALSE)
 ce2 <- conditional_effects(far_brms2, effect = "annual.anomaly.1yr:period", re_formula = NULL)
 plot(ce2)
 head(ce2[[1]])
+tail(ce2[[1]])
 
 
 
 ## setup new data
 x <- ce2[[1]]
 nd <- x[ , c("period", "annual.anomaly.1yr", "N", "model_fac")]
-nd$N <- 100
+nd$N <- 1000
 nd$count <- 1
 nd_pre <- nd[nd$period == "preindustrial", ]
 nd_his <- nd[nd$period == "historical", ]
 
 ## make predictions
-pre_pp <- posterior_predict(far_brms2, newdata = nd_pre, re_formula = NULL)
-his_pp <- posterior_predict(far_brms2, newdata = nd_his, re_formula = NULL)
+pre_pp <- posterior_epred(far_brms2, newdata = nd_pre, re_formula = NULL)
+his_pp <- posterior_epred(far_brms2, newdata = nd_his, re_formula = NULL)
 
 ## Calc probabilities
 ## These are our posterior probabilities to use for FAR calculation
-pre_prob <- pre_pp / 100
-his_prob <- his_pp / 100
+pre_prob <- pre_pp / unique(nd$N)
+his_prob <- his_pp / unique(nd$N)
+
+range(pre_prob)
+range(his_prob)
+# plot(as.vector(pre_prob))
+# plot(as.vector(his_prob))
 
 
-sst_obs <- nd_pre$annual.anomaly.1yr
 
-pre_prob_mean <- apply(pre_prob, 2, mean)
-his_prob_mean <- apply(his_prob, 2, mean)
-plot(x = sst_obs, y = pre_prob_mean, type = "l")
-lines(x = sst_obs, y = his_prob_mean, col = "red3")
+## Plot conditional effects
+pre_pred <- data.frame(period = "preindustrial",
+                       annual.anomaly.1yr = nd_pre$annual.anomaly.1yr,
+                       prob = apply(pre_prob, 2, mean),
+                       lower = apply(pre_prob, 2, quantile, probs = 0.025),
+                       upper = apply(pre_prob, 2, quantile, probs = 0.975))
+his_pred <- data.frame(period = "historical",
+                       annual.anomaly.1yr = nd_his$annual.anomaly.1yr,
+                       prob = apply(his_prob, 2, mean),
+                       lower = apply(his_prob, 2, quantile, probs = 0.025),
+                       upper = apply(his_prob, 2, quantile, probs = 0.975))
+pred <- rbind(pre_pred, his_pred)
+
+g <- ggplot(pred) +
+    geom_line(aes(x = annual.anomaly.1yr, y = prob, color = period), size = 0.8) +
+    geom_ribbon(aes(x = annual.anomaly.1yr, ymin = lower, ymax = upper, fill = period), alpha = 0.15) +
+    scale_color_manual(values = c("tomato", "steelblue")) +
+    scale_fill_manual(values = c("tomato", "steelblue"))
+print(g)
+
+
+
+## Calc FAR ##
+far <- 1 - (pre_prob / his_prob)
+range(far, na.rm = TRUE)
+
+
+far_pred <- data.frame(annual.anomaly.1yr = nd_pre$annual.anomaly.1yr,
+                       prob = apply(far, 2, mean),
+                       lower = apply(far, 2, quantile, probs = 0.025),
+                       upper = apply(far, 2, quantile, probs = 0.975))
+
+g <- ggplot(far_pred) +
+    geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
+    geom_line(aes(x = annual.anomaly.1yr, y = prob), size = 0.8) +
+    geom_ribbon(aes(x = annual.anomaly.1yr, ymin = lower, ymax = upper), alpha = 0.15)
+print(g)
+
 
 
 
