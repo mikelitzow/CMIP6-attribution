@@ -32,7 +32,7 @@ outcomes <- left_join(outcomes, weights)
 
 
 
-##################################
+## brms: setup ---------------------------------------------
 
 library(data.table)
 dt <- as.data.table(outcomes)
@@ -57,7 +57,6 @@ g <- ggplot(prop) +
 print(g)
 
 
-## What is the response here?
 form <-  bf(count | trials(N) + weights(model_weight, scale = TRUE) ~
             period + s(annual.anomaly.1yr, by = period, k = 6) + (1 | model_fac))
 
@@ -71,12 +70,12 @@ far_brms2 <- brm(form,
 saveRDS(far_brms2, "./CMIP6/brms_output/Gulf_of_Alaska_binomial2.rds")
 ## ~2.5 hours run time
 
-# far_brms2 <- readRDS("./CMIP6/brms_output/Gulf_of_Alaska_binomial2.rds")
+far_brms2 <- readRDS("./CMIP6/brms_output/Gulf_of_Alaska_binomial2.rds")
 
 ce <- conditional_effects(far_brms2)
 plot(ce, ask = FALSE)
 
-ce2 <- conditional_effects(far_brms2, effect = "annual.anomaly.1yr:period", re_formula = NULL)
+ce2 <- conditional_effects(far_brms2, effect = "annual.anomaly.1yr:period", re_formula = NA)
 plot(ce2)
 head(ce2[[1]])
 tail(ce2[[1]])
@@ -87,13 +86,13 @@ tail(ce2[[1]])
 x <- ce2[[1]]
 nd <- x[ , c("period", "annual.anomaly.1yr", "N", "model_fac")]
 nd$N <- 1000
-nd$count <- 1
 nd_pre <- nd[nd$period == "preindustrial", ]
 nd_his <- nd[nd$period == "historical", ]
 
 ## make predictions
-pre_pp <- posterior_epred(far_brms2, newdata = nd_pre, re_formula = NULL)
-his_pp <- posterior_epred(far_brms2, newdata = nd_his, re_formula = NULL)
+## exclude random effects for model_fac
+pre_pp <- posterior_epred(far_brms2, newdata = nd_pre, re_formula = NA)
+his_pp <- posterior_epred(far_brms2, newdata = nd_his, re_formula = NA)
 
 ## Calc probabilities
 ## These are our posterior probabilities to use for FAR calculation
@@ -129,7 +128,7 @@ print(g)
 
 
 
-## Calc FAR ##
+## Calc FAR
 far <- 1 - (pre_prob / his_prob)
 range(far, na.rm = TRUE)
 
@@ -144,32 +143,3 @@ g <- ggplot(far_pred) +
     geom_line(aes(x = annual.anomaly.1yr, y = prob), size = 0.8) +
     geom_ribbon(aes(x = annual.anomaly.1yr, ymin = lower, ymax = upper), alpha = 0.15)
 print(g)
-
-
-
-
-##################################
-
-
-## brms: setup ---------------------------------------------
-
-# setup variables - model as factor
-outcomes$model_fac <- as.factor(outcomes$model)
-
-## fit: brms --------------------------------------
-
-# define model formula
-
-far_formula <-  bf(annual.1yr.events | weights(model_weight, scale = TRUE) ~
-                      s(annual.anomaly.1yr, by = period, k = 6) + period + (1 | model_fac))
-
-# run with default priors
-
-far_brms <- brm(far_formula,
-                     data = outcomes,
-                     family = bernoulli(link = "logit"),
-                     cores = 4, chains = 4, iter = 3000,
-                     save_pars = save_pars(all = TRUE),
-                     control = list(adapt_delta = 0.999, max_treedepth = 15))
-
-saveRDS(far_brms, "./CMIP6/brms_output/Gulf_of_Alaska_binomial.rds")
