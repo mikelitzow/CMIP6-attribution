@@ -72,7 +72,7 @@ far_brms2 <- brm(form,
                  seed = 1234,
                  cores = 4, chains = 4, iter = 4000,
                  save_pars = save_pars(all = TRUE),
-                 control = list(adapt_delta = 0.999, max_treedepth = 16))
+                 control = list(adapt_delta = 0.99, max_treedepth = 15))
 
 
 # saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_binomial2.rds", sep = ""))
