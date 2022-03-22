@@ -11,9 +11,18 @@ source("./CMIP6/scripts/stan_utils.R")
 
 theme_set(theme_bw())
 
+# load region names
+regions <- read.csv("./CMIP6/summaries/clean_region_names.csv")
+regions <- regions[1:6,1]
+
+for(i in 1:length(regions)){
+    
 ## load preindustrial and historical outcome for the GOA
-preindustrial <- read.csv("./CMIP6/summaries/Gulf_of_Alaska_preindustrial_outcomes.csv")
-historical <- read.csv("./CMIP6/summaries/Gulf_of_Alaska_historical_outcomes.csv")
+preindustrial <- read.csv(paste("./CMIP6/summaries/", regions[i], "_preindustrial_outcomes.csv", sep = ""))
+# historical <- read.csv(paste("./CMIP6/summaries/", regions[i], "_historical_outcomes.csv", sep = ""))
+
+historical <- read.csv(paste("./CMIP6/summaries/", regions[i], "_historical_outcomes_1950-0.5_degrees_warming.csv", sep = ""))
+
 
 # combine
 outcomes <- rbind(preindustrial, historical)
@@ -23,14 +32,11 @@ weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv"
 
 weights <- weights %>%
    filter(window == "annual",
-          region == "Gulf_of_Alaska") %>%
+          region == regions[i]) %>%
    select(model, scaled.total.weight) %>%
    rename(model_weight = scaled.total.weight)
 
 outcomes <- left_join(outcomes, weights)
-
-
-
 
 ## brms: setup ---------------------------------------------
 
@@ -66,8 +72,16 @@ far_brms2 <- brm(form,
                  seed = 1234,
                  cores = 4, chains = 4, iter = 4000,
                  save_pars = save_pars(all = TRUE),
-                 control = list(adapt_delta = 0.9, max_treedepth = 13))
-saveRDS(far_brms2, "./CMIP6/brms_output/Gulf_of_Alaska_binomial2.rds")
+                 control = list(adapt_delta = 0.999, max_treedepth = 16))
+
+
+# saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_binomial2.rds", sep = ""))
+
+saveRDS(far_brms2, paste("./CMIP6/brms_output_wrt_1950-0.5_degrees_warming_/", regions[i], "_binomial2.rds", sep = ""))
+
+
+}
+
 ## ~2.5 hours run time
 
 far_brms2 <- readRDS("./CMIP6/brms_output/Gulf_of_Alaska_binomial2.rds")
