@@ -77,7 +77,7 @@ far_brms2 <- brm(form,
 
 # saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_binomial2.rds", sep = ""))
 
-saveRDS(far_brms2, paste("./CMIP6/brms_output_wrt_1950-0.5_degrees_warming_/", regions[i], "_binomial2.rds", sep = ""))
+saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_wrt_1950-0.5_degrees_warming_binomial2.rds", sep = ""))
 
 
 }
