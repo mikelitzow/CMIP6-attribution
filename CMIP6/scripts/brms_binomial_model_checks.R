@@ -108,7 +108,17 @@ trace_plot(model$fit)
 ##
 model <- readRDS("./CMIP6/brms_output/Northern_California_Current_wrt_1950-0.5_degrees_warming_binomial2.rds") # checks out
 
-check_hmc_diagnostics(model$fit) # 1 divergent transition
+check_hmc_diagnostics(model$fit) 
+neff_lowest(model$fit) # slightly low
+rhat_highest(model$fit)
+summary(model)
+bayes_R2(model)
+trace_plot(model$fit)
+
+##
+model <- readRDS("./CMIP6/brms_output/Southern_California_Current_wrt_1950-0.5_degrees_warming_binomial2.rds") # checks out
+
+check_hmc_diagnostics(model$fit) 
 neff_lowest(model$fit)
 rhat_highest(model$fit)
 summary(model)
