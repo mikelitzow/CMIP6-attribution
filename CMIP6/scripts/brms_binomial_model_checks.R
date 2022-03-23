@@ -84,3 +84,33 @@ rhat_highest(model$fit)
 summary(model)
 bayes_R2(model)
 trace_plot(model$fit)
+
+##
+model <- readRDS("./CMIP6/brms_output/Gulf_of_Alaska_wrt_1950-0.5_degrees_warming_binomial2.rds") # checks out
+
+check_hmc_diagnostics(model$fit) # 1 divergent transition
+neff_lowest(model$fit)
+rhat_highest(model$fit)
+summary(model)
+bayes_R2(model)
+trace_plot(model$fit)
+
+##
+model <- readRDS("./CMIP6/brms_output/British_Columbia_Coast_wrt_1950-0.5_degrees_warming_binomial2.rds") # checks out
+
+check_hmc_diagnostics(model$fit) # 1 divergent transition
+neff_lowest(model$fit)
+rhat_highest(model$fit) # slightly low
+summary(model)
+bayes_R2(model)
+trace_plot(model$fit)
+
+##
+model <- readRDS("./CMIP6/brms_output/Northern_California_Current_wrt_1950-0.5_degrees_warming_binomial2.rds") # checks out
+
+check_hmc_diagnostics(model$fit) # 1 divergent transition
+neff_lowest(model$fit)
+rhat_highest(model$fit)
+summary(model)
+bayes_R2(model)
+trace_plot(model$fit)
