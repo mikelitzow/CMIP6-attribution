@@ -281,6 +281,8 @@ write.csv(n.pac.obs.warming, "./CMIP6/summaries/north_pacific_annual_observed_ss
 
 # 4) fit Bayesian regression model to estimate overall warming event
 
+warming.rate <- read.csv("./CMIP6/summaries/north_pacific_annual_modeled_sst.csv", row.names = 1)
+
 warming.rate <- warming.rate %>%
   pivot_wider(names_from = name, values_from = value)
 warming.rate <- as.matrix(warming.rate)
@@ -302,10 +304,12 @@ check.plot <- as.data.frame(n.pac.warming.timing) %>%
 ggplot(check.plot, aes(year, value)) +
   geom_line() + 
   facet_wrap(~name) +
-  geom_hline(yintercept = c(0.5, 1, 1.5, 2), lty = 2, color = "red") +
-  coord_cartesian(xlim = c(2000,2050), ylim = c(0,4))
+  geom_hline(yintercept = c(0.5), lty = 2, color = "red") 
 
 # looks good!
+
+# save
+write.csv(n.pac.warming.timing, "./CMIP6/summaries/loess_smoothed_model_warming_rates.csv", row.names = F)
 
 # get the year that each warming level is reached for each model
 levels <- c(0.5, 1, 1.5, 2)
