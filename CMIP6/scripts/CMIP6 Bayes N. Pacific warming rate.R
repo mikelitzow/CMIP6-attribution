@@ -110,7 +110,7 @@ ggsave("./CMIP6/figs/modeled_observed_warming.png", width = 5, height = 3)
 
 
 # get predicted warming for each year
-new.dat <- data.frame(year = 1950:2100,
+new.dat <- data.frame(year = 1940:2100,
                       model = NA)
 
 pred <- posterior_epred(warming_brm, newdata = new.dat, re_formula = NA)
@@ -123,6 +123,9 @@ ggplot(new.dat, aes(year, pred_mean)) +
   geom_line()
 
 View(new.dat)
+
+# save 
+write.csv(new.dat, "./CMIP6/summaries/brms_predicted_North_Pac_warming.csv", row.names = F)
 
 ## warming timings under ssp585
 # 2003 is the best timing for 0.5 degrees warming
