@@ -163,11 +163,11 @@ for(i in 1:length(models)){ # start i loop (models)
 
 for(i in 1:length(regions)){
   
-  temp <- historical.outcomes %>%
+  temp <- historical.rolling.window.outcomes %>%
     filter(region == regions[i]) 
   
   # write.csv(temp, file = paste("./CMIP6/summaries/", regions[i], "_historical_outcomes.csv", sep = ""), row.names = F)
-  write.csv(temp, file = paste("./CMIP6/summaries/", regions[i], "_historical_outcomes_1950-0.5_degrees_warming.csv", sep = ""), row.names = F)
+  write.csv(temp, file = paste("./CMIP6/summaries/", regions[i], "_historical_outcomes_rolling_window.csv", sep = ""), row.names = F)
   
 }
 
