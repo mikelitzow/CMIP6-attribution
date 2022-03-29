@@ -23,18 +23,27 @@ weights <- weights %>%
   
 extremes <- left_join(extremes, weights) %>%
   mutate(model_fac = as.factor(model))
+
+# get vector of regions
+regions <- unique(extremes$region)
   
 ## brms: setup ---------------------------------------------
   
 form <-  bf(count | trials(N) + weights(model_weight, scale = TRUE) ~
-                region:period + (1 | model_fac))
-  
+                period + (1 | model_fac))
+
+# loop through each region and fit model
+
+for(i in 1:length(regions)){
+
 extremes_brms <- brm(form,
-                 data = extremes,
+                 data = extremes[extremes$region == regions[i],],
                  family = binomial(link = "logit"),
                  seed = 1234,
-                 cores = 4, chains = 4, iter = 4000,
+                 cores = 4, chains = 4, iter = 3000,
                  save_pars = save_pars(all = TRUE),
-                 control = list(adapt_delta = 0.99, max_treedepth = 15))
+                 control = list(adapt_delta = 0.9, max_treedepth = 14))
   
-saveRDS(extremes_brms, paste("./CMIP6/brms_output/extremes_binomial.rds", sep = ""))
+saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "extremes_binomial.rds", sep = ""))
+
+}
