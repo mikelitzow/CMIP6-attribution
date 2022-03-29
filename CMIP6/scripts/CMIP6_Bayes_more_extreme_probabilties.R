@@ -34,16 +34,31 @@ form <-  bf(count | trials(N) + weights(model_weight, scale = TRUE) ~
 
 # loop through each region and fit model
 
-for(i in 5:length(regions)){
+for(i in 1:length(regions)){
 
 extremes_brms <- brm(form,
                  data = extremes[extremes$region == regions[i],],
                  family = binomial(link = "logit"),
                  seed = 1234,
-                 cores = 4, chains = 4, iter = 3000,
+                 cores = 4, chains = 4, iter = 6000,
                  save_pars = save_pars(all = TRUE),
                  control = list(adapt_delta = 0.9, max_treedepth = 14))
   
 saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_extremes_binomial.rds", sep = ""))
 
 }
+
+
+# evaluate all six regional models
+
+i <- 6
+
+model <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_extremes_binomial.rds", sep = ""))
+
+check_hmc_diagnostics(model$fit)
+neff_lowest(model$fit) 
+rhat_highest(model$fit)
+summary(model)
+bayes_R2(model) 
+trace_plot(model$fit)
+
