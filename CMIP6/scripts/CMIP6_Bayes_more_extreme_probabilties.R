@@ -34,7 +34,7 @@ form <-  bf(count | trials(N) + weights(model_weight, scale = TRUE) ~
 
 # loop through each region and fit model
 
-for(i in 1:length(regions)){
+for(i in 5:length(regions)){
 
 extremes_brms <- brm(form,
                  data = extremes[extremes$region == regions[i],],
@@ -44,6 +44,6 @@ extremes_brms <- brm(form,
                  save_pars = save_pars(all = TRUE),
                  control = list(adapt_delta = 0.9, max_treedepth = 14))
   
-saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "extremes_binomial.rds", sep = ""))
+saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_extremes_binomial.rds", sep = ""))
 
 }
