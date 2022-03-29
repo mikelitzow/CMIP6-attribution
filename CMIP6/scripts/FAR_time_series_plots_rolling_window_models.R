@@ -15,9 +15,8 @@ ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_t
 
 far_pred <- data.frame()
 
-# for(i in 1:length(regions)){ # loop through regions
-
-for(i in 1:3){  
+for(i in 1:length(regions)){ # loop through regions
+ 
   # i <- 1
   
   # subset ersst.anom
@@ -83,7 +82,7 @@ far_pred$region <- reorder(far_pred$region, far_pred$order)
   
   print(g)
   
-ggsave("./CMIP6/figs/FAR_rolling_window_time_series.png", height = 2.5, width = 8, units = 'in')  
+ggsave("./CMIP6/figs/FAR_rolling_window_time_series.png", height = 5, width = 8, units = 'in')  
   
 # print 0.5 - 1.0 degree version
 
