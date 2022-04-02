@@ -8,6 +8,11 @@ theme_set(theme_bw())
 # load ERSST anomalies
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
+# plot distributions to check
+ggplot(filter(ersst.anom, year %in% 1950:1999), aes(annual.anomaly.unsmoothed)) +
+  geom_density(fill = "grey") +
+  facet_wrap(~region)
+
 # find max annual sst anomaly for each time series
 ersst.max <- ersst.anom %>%
   group_by(region) %>%
