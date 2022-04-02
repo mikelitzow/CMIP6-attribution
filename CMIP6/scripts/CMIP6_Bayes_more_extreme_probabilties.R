@@ -28,25 +28,87 @@ regional_weights <- regional_weights %>%
   select(model, region, scaled.total.weight) %>%
   rename(regional_weight = scaled.total.weight)
 
-# load model warming weights (based on prediction of experienced warming)
-warming_weights <- read.csv("./CMIP6/summaries/N_Pac_warming_model_weights.csv")
+# calculate region-specific model warming weights (based on prediction of experienced warming)
+# save these values for future analysis
+ersst <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv")
 
-warming_weights <- warming_weights %>%
-  rename(warming_weight = weight) %>%
-  select(model, warming_weight)
+ersst <- ersst %>%
+  filter(year >= 1950) %>%
+  select(region, year, annual.unsmoothed) %>%
+  mutate(model = "ersst")
 
-weights <- left_join(regional_weights, warming_weights) %>%
-  mutate(total_weight = regional_weight * warming_weight)
+models <- read.csv("./CMIP6/summaries/CMIP6.sst.time.series.csv")
+
+# combine models and ersst observations into "data"
+data <- models %>% 
+  filter(experiment == "hist_ssp585",
+         year %in% 1950:2021) %>% # note that for regional warming we will calculate anomalies wrt 1950-1999 (beginning of trustworthy ERSST)
+  select(region, year, annual.unsmoothed, model)
+
+data <- rbind(data, ersst) 
+
+# calculate 1950:1999 climatology for each model and ersst
+climatology <- data %>%
+  filter(year %in% 1950:1999) %>%
+  group_by(region, model) %>%
+  summarize(climatology.mean = mean(annual.unsmoothed), climatology.sd = sd(annual.unsmoothed))
+
+# combine climatology and data, calculate anomalies
+data <- left_join(data, climatology) %>%
+  mutate(anomaly = (annual.unsmoothed - climatology.mean) / climatology.sd)
+
+# and pivot longer (ersst vs models)
+ersst <- data %>%
+  filter(model == "ersst") %>%
+  select(region, year, anomaly) %>%
+  rename(ersst.anomaly = anomaly)
+
+data <- data %>%
+  filter(model != "ersst") %>%
+  left_join(., ersst)
+
+
+# loop through and fit linear ersst - model regressions to get weights
+regional_warming_weights <- data.frame()
+
+regions <- unique(data$region)
+models <- unique(data$model)
+
+for(r in 1:length(regions)){ # loop through regions
+  # r <- 1
+  
+  for(m in 1:length(models)){ # loop through models
+    # m <- 1
+    
+    temp.dat <- data %>%
+      filter(region == regions[r],
+             model == models[m],
+             year %in% 1972:2021)
+    
+    
+    mod <- lm(ersst.anomaly ~ anomaly, data = temp.dat)
+    
+    regional_warming_weights <- rbind(regional_warming_weights,
+                                      data.frame(region = regions[r],
+                                                 model = models[m],
+                                                 regional_warming_weight = 1 / abs(1-coefficients(mod)[2]))) # inverse of difference from 1!
+    }
+  
+  }
+
+
+weights <- left_join(regional_weights, regional_warming_weights) %>%
+  mutate(total_weight = regional_weight * regional_warming_weight)
 
 
 # plot to examine
-ggplot(weights, aes(regional_weight, warming_weight)) +
+ggplot(weights, aes(regional_weight, regional_warming_weight)) +
   geom_point() +
-  facet_wrap(~region)
+  facet_wrap(~region, scale = "free_y")
 
 ggplot(weights, aes(total_weight)) +
   geom_histogram(fill = "grey", color = "black", bins = 20) +
-  facet_wrap(~region)
+  facet_wrap(~region, scale = "free_x") # I think this looks reasonable
 
 extremes <- left_join(extremes, weights) %>%
   mutate(model_fac = as.factor(model))
@@ -62,14 +124,14 @@ form <-  bf(count | trials(N) + weights(total_weight, scale = TRUE) ~
 # loop through each region and fit model
 
 # for(i in 1:length(regions)){
-
-for(i in 1:2){
+  for(i in 1:3){
+    i <- 1
 
 extremes_brms <- brm(form,
                  data = extremes[extremes$region == regions[i],],
                  family = binomial(link = "logit"),
                  seed = 1234,
-                 cores = 4, chains = 4, iter = 6000,
+                 cores = 4, chains = 4, iter = 15000,
                  save_pars = save_pars(all = TRUE),
                  control = list(adapt_delta = 0.9, max_treedepth = 14))
   
@@ -80,12 +142,12 @@ saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_extremes_bin
 
 # evaluate all six regional models
 
-i <- 6
+i <- 1
 
 model <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_extremes_binomial.rds", sep = ""))
 
 check_hmc_diagnostics(model$fit)
-neff_lowest(model$fit) # N. Pac and EBS are low
+neff_lowest(model$fit) # N. Pac, EBS and GOA are low
 rhat_highest(model$fit)
 summary(model)
 bayes_R2(model) 
@@ -113,6 +175,15 @@ plot.dat <- rbind(plot.dat,
                              upper = apply(probs, 2, quantile, probs = 0.975)))
 }
 
+# calculate inverse to get expected return time
+plot.dat[,c(3:5)] <- 1/plot.dat[,c(3:5)]
+
+# and change values above 10^4 to 10^4
+
+change <- plot.dat[,c(3:5)] > 10^4
+
+plot.dat[,c(3:5)][change] <- 10^4
+
 # set regions and periods in order
 region.order <- data.frame(region = regions,
                          region.order = 1:6)
@@ -128,6 +199,18 @@ plot.dat <- left_join(plot.dat, period.order) %>%
 
 
 ggplot(plot.dat, aes(period, prob)) +
-  geom_col(fill = "grey") +
-  geom_errorbar(aes(x = period, ymin = lower, ymax = upper)) +
-  facet_wrap(~region, scales = "free_y")
+  geom_errorbar(aes(x = period, ymin = lower, ymax = upper), width = 0.3) +
+  geom_point(color = "red", size = 4) +
+  facet_wrap(~region) +
+  scale_y_continuous(breaks=c(1,10,100,1000,10000),
+                     labels = c("10^0", "10^1", "10^2", "10^3", "> 10^4"),
+                     minor_breaks = c(2:9, 
+                                      seq(20, 90, by = 10),
+                                      seq(200, 900, by = 100),
+                                      seq(2000, 9000, by = 1000))) +
+  coord_trans(y = "pseudo_log") +
+  ylab("Expected return time (years)") + 
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45,
+                                   hjust = 1))
+        
