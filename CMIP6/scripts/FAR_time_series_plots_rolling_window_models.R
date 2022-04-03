@@ -84,26 +84,3 @@ far_pred$region <- reorder(far_pred$region, far_pred$order)
   
 ggsave("./CMIP6/figs/FAR_rolling_window_time_series.png", height = 5, width = 8, units = 'in')  
   
-# print 0.5 - 1.0 degree version
-
-plot.dat <- far_pred %>%
-  filter(present == "0.5 - 1.0 degrees")
-
-g <- ggplot(plot.dat) +
-  geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
-  geom_line(aes(x = year, y = prob), size = 0.3, color = "red") +
-  geom_ribbon(aes(x = year, ymin = lower, ymax = upper), alpha = 0.15) +
-  facet_wrap(~region) +
-  theme(axis.title.x = element_blank()) +
-  ylab("Fraction of Attributable Risk")
-
-print(g)
-
-ggsave("./CMIP6/figs/regional_FAR_0.5-1.0_degrees_warming.png", width = 6, height = 3, units = 'in')
-
-
-# add risk ratios!
-far_pred <- far_pred %>%
-  mutate(risk_ratio = 1/(1-prob))
-
-View(far_pred)  
