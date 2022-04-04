@@ -213,4 +213,5 @@ ggplot(plot.dat, aes(period, prob)) +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45,
                                    hjust = 1))
-        
+
+ggsave("./CMIP6/figs/extreme_return_time.png", width = 6, height = 8, units = 'in')        
