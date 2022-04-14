@@ -130,40 +130,6 @@ CMIP6.PC1 <- read.csv("./CMIP6/summaries/CMIP6_PC1.csv")
 
 ## plot CMIP6 loadings ---------------------------------
 
-# get SST dimensions again - for plotting
-files.new <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585")
-path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.new[1], sep="")
-
-# load file
-nc <- nc_open(path)
-
-# extract dates
-d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
-m <- months(d)
-yr <- years(d)
-
-# extract lat / long
-x <- ncvar_get(nc, "lon")
-y <- ncvar_get(nc, "lat")
-
-# extract experiments and choose historical
-experiments <-  ncvar_get(nc, "experiment", verbose = F)
-experiment.keep <- grep("hist_ssp585", experiments)
-
-# extract SST
-SST <- ncvar_get(nc, "tos", verbose = F, start = c(experiment.keep,1,1,1), count = c(1,-1,-1,-1))
-
-SST <- aperm(SST, 3:1)
-
-SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))
-
-# Keep track of corresponding latitudes and longitudes of each column:
-lat <- rep(y, length(x))
-lon <- rep(x, each = length(y))
-dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
-
-# identify land
-land <- is.na(colMeans(SST))
 
 # get range for plotting
 limits <- CMIP6.EOF1 %>%
@@ -188,15 +154,41 @@ plot.dat <- CMIP6.EOF1 %>%
   left_join(., plot.limits)
 
 
-
-
 models <- unique(CMIP6.EOF1$model)
 
 png("./CMIP6/figs/CMIP6_and_ERSST_EOF1_loadings.png", width = 7, height = 11, units = 'in', res = 300)
 par(mfrow = c(6, 4), mar = c(0.5, 0.5, 1, 0.5))
 
 for(i in 1:length(models)){
+# i <- 1
 
+# load model run again to get proper grid
+path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.new[i], sep="")
+
+# load file
+nc <- nc_open(path)
+
+# extract lat / long
+
+x <- ncvar_get(nc, "lon")
+y <- ncvar_get(nc, "lat")
+
+# extract experiments and choose historical
+experiments <-  ncvar_get(nc, "experiment", verbose = F)
+experiment.keep <- grep("hist_ssp585", experiments)
+
+# extract SST
+
+SST <- ncvar_get(nc, "tos", verbose = F, start = c(experiment.keep,1,1,1), count = c(1,-1,-1,-1))
+
+SST <- aperm(SST, 3:1)
+
+SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))
+
+# identify land
+land <- is.na(colMeans(SST))
+
+# plot EOF loadings
 temp.plot <- plot.dat %>%
   filter(model == models[i])
   
