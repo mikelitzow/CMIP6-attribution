@@ -97,13 +97,14 @@ dat_ce$Source <- reorder(dat_ce$Source, dat_ce$order)
 cb <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 ggplot(dat_ce) +
-  aes(x = year, y = estimate__, color = Source) +
+  aes(x = year, y = estimate__, color = Source, fill = Source) +
   geom_line() +
-  geom_ribbon(data = filter(dat_ce, Source == "Modeled warming"), 
-              aes(x = year, ymin = lower__, ymax = upper__), alpha = 0.15, lty = 0) +
+  geom_ribbon( 
+              aes(x = year, ymin = lower__, ymax = upper__, fill = Source), alpha = 0.15, lty = 0) +
   theme_bw() +
   theme(axis.title = element_blank()) +
-  scale_color_manual(values = cb[c(2,4)])
+  scale_color_manual(values = cb[c(2,4)]) +
+  scale_fill_manual(values = cb[c(2,4)])
 
 
 ggsave("./CMIP6/figs/modeled_observed_warming.png", width = 5, height = 3)
