@@ -16,7 +16,7 @@ regions <- read.csv("./CMIP6/summaries/clean_region_names.csv")
 regions <- regions[1:6,1]
 
 # for(i in 2:length(regions)){
-    i <- 1
+    i <-5
 ## load preindustrial and historical outcomes
 preindustrial <- read.csv(paste("./CMIP6/summaries/", regions[i], "_preindustrial_outcomes.csv", sep = ""))
 
@@ -68,7 +68,7 @@ g <- ggplot(prop) +
     theme(legend.position="none")
 print(g)
 
-71
+
 form <-  bf(count | trials(N) + weights(model_weight, scale = TRUE) ~
             period + s(annual.anomaly.3yr, by = period, k = 6) +
             s(ersst.year, by = period, k = 6) + (1 | model_fac))
@@ -77,15 +77,15 @@ far_brms2 <- brm(form,
                  data = prop,
                  family = binomial(link = "logit"),
                  seed = 1234,
-                 cores = 4, chains = 4, iter = 3500,
+                 cores = 4, chains = 4, iter = 4000,
                  save_pars = save_pars(all = TRUE),
-                 control = list(adapt_delta = 0.9999, max_treedepth = 15))
+                 control = list(adapt_delta = 0.999, max_treedepth = 15))
 
 # saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_binomial2.rds", sep = ""))
 
 saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_3yr_mean_annual_sst_rolling_window_binomial2.rds", sep = ""))
 
-# }
+6# }
 ## ~2.5 hours run time
 
 far_brms2 <- readRDS("./CMIP6/brms_output/Gulf_of_Alaska_binomial2.rds")
