@@ -135,7 +135,7 @@ write.csv(new.dat, "./CMIP6/summaries/brms_predicted_North_Pac_warming.csv", row
 # 2033 warming is 1.5 degrees
 # 2045 warming is 2.0 degrees
 
-## fit inverse model - year as a function of warming
+## fit inverse model - year as a function of warming -----------------------------
 
 inverse_formula <-  bf(year | weights(weight) ~ s(warming) + (1 | model_fac))
 
@@ -143,39 +143,33 @@ inverse_formula <-  bf(year | weights(weight) ~ s(warming) + (1 | model_fac))
 get_prior(inverse_formula, dat)
 
 inverse_warming_brm <- brm(inverse_formula,
-                   data = dat,
-                   cores = 4, chains = 4, iter = 5000,
-                   save_pars = save_pars(all = TRUE),
-                   control = list(adapt_delta = 0.99, max_treedepth = 16))
+                           data = dat,
+                           cores = 4, chains = 4, iter = 5000,
+                           save_pars = save_pars(all = TRUE),
+                           control = list(adapt_delta = 0.99, max_treedepth = 16))
 
 saveRDS(inverse_warming_brm, file = "./CMIP6/brms_output/inverse_warming_brm.rds")
 
-warming_brm <- readRDS("./CMIP6/brms_output/warming_brm.rds")
+inverse_warming_brm <- readRDS("./CMIP6/brms_output/inverse_warming_brm.rds")
 
-check_hmc_diagnostics(warming_brm$fit)
-neff_lowest(warming_brm$fit) # ??
-rhat_highest(warming_brm$fit)
-summary(warming_brm)
-bayes_R2(warming_brm)
-plot(warming_brm$criteria$loo, "k")
-plot(conditional_effects(warming_brm), ask = FALSE)
-y <- dat$warming
-yrep_warming_brm  <- fitted(warming_brm, scale = "response", summary = FALSE)
-ppc_dens_overlay(y = y, yrep = yrep_warming_brm[sample(nrow(yrep_warming_brm), 25), ]) +
-  xlim(-6, 6) +
-  ggtitle("warming_brm")
-pdf("./figs/trace_warming_brm.pdf", width = 6, height = 4)
-trace_plot(warming_brm$fit)
-dev.off()
+check_hmc_diagnostics(inverse_warming_brm$fit)
+neff_lowest(inverse_warming_brm$fit) # ??
+rhat_highest(inverse_warming_brm$fit)
+summary(inverse_warming_brm)
+bayes_R2(inverse_warming_brm)
+plot(inverse_warming_brm$criteria$loo, "k")
+plot(conditional_effects(inverse_warming_brm), ask = FALSE)
+
+trace_plot(inverse_warming_brm$fit)
 
 
 ## SST anomaly predictions #### 95% CI
-ce1s_1 <- conditional_effects(warming_brm, effect = "year", re_formula = NA,
-                              probs = c(0.025, 0.975))
+ce1s_1 <- conditional_effects(inverse_warming_brm, effect = "warming", re_formula = NA,
+                              probs = c(0.025, 0.975), resolution = 1000)
 
-dat_ce <- ce1s_1$year %>%
-  select(year, estimate__, lower__, upper__) %>%
-  mutate(Source = "Modeled warming")
+dat_ce <- ce1s_1$warming %>%
+  select(warming, estimate__, lower__, upper__) %>%
+  mutate(Source = "Modeled year")
 
 # add observations
 ersst <- read.csv("./CMIP6/summaries/North_Pacific_ersst_1854-2021.csv")
