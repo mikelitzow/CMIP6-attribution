@@ -226,13 +226,13 @@ weighted.cell.mean <- function(x) weighted.mean(x, w = cell.weight, na.rm = T)
 # create a function to compute monthly anomalies
 monthly.anomalies <- function(x) tapply(x, m, mean) 
 
-# short year and month vectors for 1950-2021
-yr.1950.2021 <- yr[yr %in% 1950:2021]
-m.1950.2021 <- m[yr %in% 1950:2021]
+# # short year and month vectors for 1950-2021
+# yr.1950.2021 <- yr[yr %in% 1950:2021]
+# m.1950.2021 <- m[yr %in% 1950:2021]
 
 # and define winter year
-winter.year <- if_else(m.1950.2021  %in% c("Nov", "Dec"), as.numeric(as.character(yr.1950.2021)) +1, as.numeric(as.character(yr.1950.2021)))
-winter.year <- winter.year[m.1950.2021  %in% c("Nov", "Dec", "Jan", "Feb", "Mar")]
+winter.year <- if_else(m  %in% c("Nov", "Dec"), as.numeric(as.character(yr)) +1, as.numeric(as.character(yr)))
+winter.year <- winter.year[m  %in% c("Nov", "Dec", "Jan", "Feb", "Mar")]
 
 # create blank data frame for catching results
 temp.time.series <- temp.anomaly.time.series <- data.frame()
@@ -268,19 +268,18 @@ for(i in 1: length(sst.data.names)){
   ## now create time series of annual means
   ## unsmoothed, and two- and three-year running means
  
-  # calculate monthly mean temp weighted by area for 1950-2021
-  # this time period motivated by assessment of period of trustworthy monthly data in GOA 
-  temp.monthly.sst <- apply(temp.dat[yr %in% 1950:2021,], 1, weighted.cell.mean) 
+  # calculate monthly mean temp weighted by area  
+  temp.monthly.sst <- apply(temp.dat, 1, weighted.cell.mean) 
   
   # calculate annual means
-  temp.annual <- tapply(temp.monthly.sst, yr[yr %in% 1950:2021], mean) 
+  temp.annual <- tapply(temp.monthly.sst, yr, mean) 
   
   temp.2yr <- rollmean(temp.annual, 2, fill = NA, align = "left") # for salmon - year of and year after ocean entry
   
   temp.3yr <- rollmean(temp.annual, 3, fill = NA, align = "center") # for salmon - year before, year of, and year after ocean entry
 
   # calculate winter means
-  temp.winter.monthly.sst <- temp.monthly.sst[m.1950.2021 %in% c("Nov", "Dec", "Jan", "Feb", "Mar")]
+  temp.winter.monthly.sst <- temp.monthly.sst[m %in% c("Nov", "Dec", "Jan", "Feb", "Mar")]
 
   temp.winter <- tapply(temp.winter.monthly.sst, winter.year, mean)
   
@@ -298,19 +297,19 @@ for(i in 1: length(sst.data.names)){
   # combine into data frame of time series by region
   temp.time.series <- rbind(temp.time.series,
                             data.frame(region = sst.clean.names[i],
-                                       year = 1950:2021,
-                                       annual.unsmoothed = temp.annual[names(temp.annual) %in% 1950:2021],
-                                       annual.two.yr.running.mean = temp.2yr[names(temp.annual) %in% 1950:2021],
-                                       annual.three.yr.running.mean = temp.3yr[names(temp.annual) %in% 1950:2021],
-                                       winter.unsmoothed = temp.winter[names(temp.winter) %in% 1950:2021],
-                                       winter.two.yr.running.mean = temp.winter.2yr[names(temp.winter) %in% 1950:2021],
-                                       winter.three.yr.running.mean = temp.winter.3yr[names(temp.winter) %in% 1950:2021]))
+                                       year = 1854:2021,
+                                       annual.unsmoothed = temp.annual,
+                                       annual.two.yr.running.mean = temp.2yr,
+                                       annual.three.yr.running.mean = temp.3yr,
+                                       winter.unsmoothed = temp.winter[names(temp.winter) %in% 1854:2021],
+                                       winter.two.yr.running.mean = temp.winter.2yr[names(temp.winter) %in% 1854:2021],
+                                       winter.three.yr.running.mean = temp.winter.3yr[names(temp.winter) %in% 1854:2021]))
 
-  ## now calculate the data as anomalies wrt 1950-1999
+  ## now calculate the data as anomalies wrt 1854-1949
   # calculate annual anomalies
-  annual.climatology.mean <- mean(temp.annual[names(temp.annual) %in% 1950:1999])
+  annual.climatology.mean <- mean(temp.annual[names(temp.annual) %in% 1854:1949])
     
-  annual.climatology.sd <- sd(temp.annual[names(temp.annual) %in% 1950:1999])
+  annual.climatology.sd <- sd(temp.annual[names(temp.annual) %in% 1854:1949])
   
   temp.annual.anom <- (temp.annual - annual.climatology.mean) / annual.climatology.sd
   
@@ -319,9 +318,9 @@ for(i in 1: length(sst.data.names)){
   temp.anom.3yr <- rollmean(temp.annual.anom, 3, fill = NA, align = "center") # for salmon - year before, year of, and year after ocean entry
   
   # calculate winter anomalies
-  winter.climatology.mean <- mean(temp.winter[names(temp.winter) %in% 1950:1999], na.rm = T)
+  winter.climatology.mean <- mean(temp.winter[names(temp.winter) %in% 1854:1949], na.rm = T)
   
-  winter.climatology.sd <- sd(temp.winter[names(temp.winter) %in% 1950:1999], na.rm = T)
+  winter.climatology.sd <- sd(temp.winter[names(temp.winter) %in% 1854:1949], na.rm = T)
   
   temp.winter.anom <- (temp.winter - winter.climatology.mean) / winter.climatology.sd
   
@@ -332,13 +331,13 @@ for(i in 1: length(sst.data.names)){
   # combine into data frame of time series by region
   temp.anomaly.time.series <- rbind(temp.anomaly.time.series,
                             data.frame(region = sst.clean.names[i],
-                                       year = 1950:2021,
-                                       annual.anomaly.unsmoothed = temp.annual.anom[names(temp.annual.anom) %in% 1950:2021],
-                                       annual.anomaly.two.yr.running.mean = temp.anom.2yr[names(temp.annual.anom) %in% 1950:2021],
-                                       annual.anomaly.three.yr.running.mean = temp.anom.3yr[names(temp.annual.anom) %in% 1950:2021],
-                                       winter.anomaly.unsmoothed = temp.winter.anom[names(temp.winter.anom) %in% 1950:2021],
-                                       winter.anomaly.two.yr.running.mean = temp.winter.anom.2yr[names(temp.winter.anom) %in% 1950:2021],
-                                       winter.anomaly.three.yr.running.mean = temp.winter.anom.3yr[names(temp.winter.anom) %in% 1950:2021]))
+                                       year = 1854:2021,
+                                       annual.anomaly.unsmoothed = temp.annual.anom,
+                                       annual.anomaly.two.yr.running.mean = temp.anom.2yr,
+                                       annual.anomaly.three.yr.running.mean = temp.anom.3yr,
+                                       winter.anomaly.unsmoothed = temp.winter.anom[names(temp.winter.anom) %in% 1854:2021],
+                                       winter.anomaly.two.yr.running.mean = temp.winter.anom.2yr[names(temp.winter.anom) %in% 1854:2021],
+                                       winter.anomaly.three.yr.running.mean = temp.winter.anom.3yr[names(temp.winter.anom) %in% 1854:2021]))
   
     
   }
