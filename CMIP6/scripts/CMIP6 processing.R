@@ -146,11 +146,11 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
                                        winter.two.yr.running.mean = temp.winter.2yr[names(temp.winter) %in% 1850:2099],
                                        winter.three.yr.running.mean = temp.winter.3yr[names(temp.winter) %in% 1850:2099]))
   
-  ## now calculate the data as anomalies wrt 1950-1999
+  ## now calculate the data as anomalies wrt 1850:1949
   # calculate annual anomalies
-  annual.climatology.mean <- mean(temp.annual[names(temp.annual) %in% 1950:1999])
+  annual.climatology.mean <- mean(temp.annual[names(temp.annual) %in% 1850:1949])
   
-  annual.climatology.sd <- sd(temp.annual[names(temp.annual) %in% 1950:1999])
+  annual.climatology.sd <- sd(temp.annual[names(temp.annual) %in% 1850:1949])
   
   temp.annual.anom <- (temp.annual - annual.climatology.mean) / annual.climatology.sd
   
@@ -159,9 +159,9 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   temp.anom.3yr <- rollmean(temp.annual.anom, 3, fill = NA, align = "center") # for salmon - year before, year of, and year after ocean entry
   
   # calculate winter anomalies
-  winter.climatology.mean <- mean(temp.winter[names(temp.winter) %in% 1950:1999], na.rm = T)
+  winter.climatology.mean <- mean(temp.winter[names(temp.winter) %in% 1850:1949], na.rm = T)
   
-  winter.climatology.sd <- sd(temp.winter[names(temp.winter) %in% 1950:1999], na.rm = T)
+  winter.climatology.sd <- sd(temp.winter[names(temp.winter) %in% 1850:1949], na.rm = T)
   
   temp.winter.anom <- (temp.winter - winter.climatology.mean) / winter.climatology.sd
   
@@ -257,9 +257,9 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
       
     ## now calculate the data as anomalies wrt 1950-1999
     # calculate annual anomalies
-    annual.climatology.mean <- mean(temp.annual[names(temp.annual) %in% 1950:1999])
+    annual.climatology.mean <- mean(temp.annual[names(temp.annual) %in% 1850:1949])
       
-    annual.climatology.sd <- sd(temp.annual[names(temp.annual) %in% 1950:1999])
+    annual.climatology.sd <- sd(temp.annual[names(temp.annual) %in% 1850:1949])
       
     temp.annual.anom <- (temp.annual - annual.climatology.mean) / annual.climatology.sd
       
@@ -268,9 +268,9 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
     temp.anom.3yr <- rollmean(temp.annual.anom, 3, fill = NA, align = "center") # for salmon - year before, year of, and year after ocean entry
       
     # calculate winter anomalies
-    winter.climatology.mean <- mean(temp.winter[names(temp.winter) %in% 1950:1999], na.rm = T)
+    winter.climatology.mean <- mean(temp.winter[names(temp.winter) %in% 1850:1949], na.rm = T)
       
-    winter.climatology.sd <- sd(temp.winter[names(temp.winter) %in% 1950:1999], na.rm = T)
+    winter.climatology.sd <- sd(temp.winter[names(temp.winter) %in% 1850:1949], na.rm = T)
       
     temp.winter.anom <- (temp.winter - winter.climatology.mean) / winter.climatology.sd
       
