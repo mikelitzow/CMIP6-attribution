@@ -394,6 +394,7 @@ g <- ggplot(ersst.plot) +
   geom_line(aes(x = year, y = value, color = window), size = 0.25) +
   facet_wrap(~region, scales = "free_y") +
   ylab("Anomaly wrt 1854-1949") +
+  geom_hline(yintercept = 0, lty = 2) +
   theme(axis.title.x = element_blank()) +
   scale_color_manual(values = cb[c(2,6)]) +
   scale_fill_manual(values = cb[c(2,6)])
