@@ -15,7 +15,7 @@ theme_set(theme_bw())
 regions <- read.csv("./CMIP6/summaries/clean_region_names.csv")
 regions <- regions[1:6,1]
 
-for(i in 4:length(regions)){
+for(i in 1:length(regions)){
     # i <- 1
 ## load preindustrial and historical outcome for the GOA
 preindustrial <- read.csv(paste("./CMIP6/summaries/", regions[i], "_preindustrial_outcomes.csv", sep = ""))
@@ -78,40 +78,7 @@ far_brms2 <- brm(form,
                  control = list(adapt_delta = 0.99, max_treedepth = 15))
 
 
-# saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_binomial2.rds", sep = ""))
-
 saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_rolling_window_binomial2.rds", sep = ""))
-# this approach took ~10 hours to run 10%
-# form <-  bf(count | trials(N) + weights(model_weight, scale = TRUE) ~
-#            year_fac + (1 | model_fac))
-# 
-
-# far_brms2 <- brm(form,
-#                  data = prop[period == "preindustrial", ],
-#                  family = binomial(link = "logit"),
-#                  seed = 1234,
-#                  cores = 4, chains = 4, iter = 4000,
-#                  save_pars = save_pars(all = TRUE),
-#                  control = list(adapt_delta = 0.99, max_treedepth = 15))
-# 
-# 
-# # saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_binomial2.rds", sep = ""))
-# 
-# saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "preindustrial_rolling_window_binomial2.rds", sep = ""))
-
-# 
-# far_brms2 <- brm(form,
-#                  data = prop[period == "historical", ],
-#                  family = binomial(link = "logit"),
-#                  seed = 1234,
-#                  cores = 4, chains = 4, iter = 4000,
-#                  save_pars = save_pars(all = TRUE),
-#                  control = list(adapt_delta = 0.99, max_treedepth = 15))
-# 
-# 
-# # saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_binomial2.rds", sep = ""))
-# 
-# saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "historical_rolling_window_binomial2.rds", sep = ""))
 
 }
 
