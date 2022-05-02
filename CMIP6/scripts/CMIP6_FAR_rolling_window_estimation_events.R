@@ -1,28 +1,45 @@
 ## summarize events across each model-region combination
-## to estimate preindustrial and historical probability
+## to estimate historical probability
 
 library(tidyverse)
 
 theme_set(theme_bw())
 
 ## STEP 1 ----------------------------------------------------
-# calculate ERSST anomalies wrt 1950-1999 for each region
+# calculate ERSST anomalies wrt 1854-1949 for each region
 # this was done ERSST summaries.R"
 
 ## STEP 2 -----------------------
-# calculate anomaly wrt 1950-1999 for each model preindustrial and hist_ssp585
+# calculate anomaly wrt 1850-1949 for each model preindustrial and hist_ssp585
 # this was done in "CMIP6 processing.R"
 
 ## STEP 3 ---------------------------------------------
-# Record the positive and negative outcomes for each preindustrial and historical run
+# Record the positive and negative outcomes for each preindustrial run
 # for each model-anomaly combination (>= this anomaly or not)
-# using years between 1950 and warming = 1.0 as "present"
+# this was done in "CMIP6_FAR_estimation_events.R"
+
+## STEP 4 ---------------------------------------------
+# Record the positive and negative outcomes for each hist_ssp585 run
+# for each model-anomaly combination (>= this anomaly or not)
+# using 15-year rolling window of estimated warming as "present"
+# THIS SCRIPT
+
 
 # load ERSST anomalies
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
+# limit to 1950-2021 (period of interest for attribution)
+ersst.anom <- ersst.anom %>%
+  filter(year %in% 1950:2021)
+
 # load CMIP6 anomalies
 cmip.anom <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv")
+
+# get vector of model names
+models <- unique(cmip.anom$model)
+
+# get vector of regions
+regions <- unique(cmip.anom$region)
 
 # load CMIP6 model weights
 model.weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv") 
@@ -36,7 +53,7 @@ check <- data.frame(models = models,
 check # line up, just have the -/. difference
 
 # fix
-colnames(model.warming.trends)[2:ncol(model.warming.trends)] <-models
+colnames(model.warming.trends)[2:ncol(model.warming.trends)] <- models
 
 # and pivot longer 
 model.warming.trends <- model.warming.trends %>%
@@ -45,12 +62,6 @@ model.warming.trends <- model.warming.trends %>%
 
 # and load predicted warming rate across all models (weighted by 1972:2021 predictions)
 predicted.warming <- read.csv("./CMIP6/summaries/brms_predicted_North_Pac_warming.csv")
-
-# get vector of model names
-models <- unique(cmip.anom$model)
-
-# get vector of regions
-regions <- unique(cmip.anom$region)
 
 
 ## record historical outcomes ----------------
@@ -77,21 +88,10 @@ for(i in 1:length(models)){ # start i loop (models)
       filter(experiment == "hist_ssp585",
              model == models[i],
              region == regions[j])
-    
-  # # pull "present" years (0.5 to 1.0 degrees warming OR 1950 - 0.5 degrees warming)
-  # 
-  # # use = timing$year[timing$model == models[i] & timing$level == 0.5]:timing$year[timing$model == models[i] & timing$level == 1.0]
-  # use = 1950:timing$year[timing$model == models[i] & timing$level == 0.5]
-  # 
-  # 
-  # # and limit hist.temp to these years
-  # hist.temp <- hist.temp %>%
-  #   filter(year %in% use)
-  
+
   # break out the relevant region from ersst
   ersst.temp <- ersst.anom %>%
     filter(region == regions[j])
-  
   
   # loop through each year of observation
   for(k in 1:nrow(ersst.temp)){ # start k loop (years)
