@@ -350,7 +350,8 @@ plot.dat <- temp.time.series %>%
          year,
          annual.unsmoothed,
          winter.unsmoothed) %>%
-  pivot_longer(cols = c(-region, -year))
+  pivot_longer(cols = c(-region, -year)) 
+
 
 ggplot(plot.dat, aes(year, value, color = region)) +
   geom_line() +
@@ -361,6 +362,45 @@ ggplot(plot.dat, aes(year, value, color = region)) +
 # and save 
 write.csv(temp.time.series, "./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv", row.names = F)
 write.csv(temp.anomaly.time.series, "./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv", row.names = F)
+
+
+# and plot
+ersst.plot <- temp.anomaly.time.series %>%
+  select(region, year, annual.anomaly.unsmoothed, annual.anomaly.three.yr.running.mean)
+
+names(ersst.plot)[3:4] <- c("annual", "3yr_running_mean")
+
+ersst.plot <- ersst.plot %>%
+  pivot_longer(cols = c(-region, -year), names_to = "window")
+
+# reorder areas 
+region.order <- data.frame(region = sst.clean.names,
+                           order = 1:6)
+
+ersst.plot <- left_join(ersst.plot, region.order)
+
+ersst.plot$region <- reorder(ersst.plot$region, ersst.plot$order)
+
+# reorder windows
+window.order <- data.frame(window = c("annual", "3yr_running_means"),
+                           window.order = c(1, 2))
+
+ersst.plot <- left_join(ersst.plot, window.order)
+
+ersst.plot$window <- reorder(ersst.plot$window, ersst.plot$window.order)
+
+
+g <- ggplot(ersst.plot) +
+  geom_line(aes(x = year, y = value, color = window), size = 0.25) +
+  facet_wrap(~region, scales = "free_y") +
+  ylab("Anomaly wrt 1854-1949") +
+  theme(axis.title.x = element_blank()) +
+  scale_color_manual(values = cb[c(2,6)]) +
+  scale_fill_manual(values = cb[c(2,6)])
+
+print(g)
+
+ggsave("./CMIP6/figs/ersst_regional_anomalies_annual_3yr.png", height = 4.5, width = 10, units = 'in')  
 
 # create dataframe saving the coordinates for each polygon to use for subsetting CMIP6 draws
 
