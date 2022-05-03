@@ -392,7 +392,7 @@ ersst.plot$window <- reorder(ersst.plot$window, ersst.plot$window.order)
 
 g <- ggplot(ersst.plot) +
   geom_line(aes(x = year, y = value, color = window), size = 0.25) +
-  facet_wrap(~region, scales = "free_y") +
+  facet_wrap(~region) +
   ylab("Anomaly wrt 1854-1949") +
   geom_hline(yintercept = 0, lty = 2) +
   theme(axis.title.x = element_blank()) +
