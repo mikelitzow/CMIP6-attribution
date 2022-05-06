@@ -17,6 +17,10 @@ regions <- regions[1:6,1]
 # load ERSST anomalies
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
+# limit to 1950:2021
+ersst.anom <- ersst.anom %>%
+  filter(year %in% 1950:2021)
+
 far_pred_annual <- data.frame()
 
 for(i in 1:length(regions)){ # loop through regions
@@ -161,7 +165,34 @@ far_pred_annual$window = "annual"
   print(g)
   
 ggsave("./CMIP6/figs/FAR_rolling_window_time_series_annual_3yr.png", height = 4.5, width = 10, units = 'in')  
-  
+
+# temporary version for talk
+far_pred <- far_pred %>%
+  filter(window == "annual",
+         region %in% c("North_Pacific", "Gulf_of_Alaska", "British_Columbia_Coast"))
+
+
+g <- ggplot(far_pred) +
+  geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
+  geom_line(aes(x = year, y = prob, color = window), size = 0.25) +
+  geom_ribbon(aes(x = year, ymin = lower, ymax = upper, fill = window), alpha = 0.15) +
+  facet_wrap(~region) +
+  ylab("Fraction of Attributable Risk") +
+  theme(axis.title.x = element_blank()) +
+  scale_color_manual(values = cb[c(2,6)]) +
+  scale_fill_manual(values = cb[c(2,6)])
+
+print(g)
+
+ggsave("./CMIP6/figs/N_Pac_GOA_BC_FAR_rolling_window_time_series_annual.png", height = 3, width = 10, units = 'in')  
+
+# aside - calculate risk ratio
+RR <- far_pred %>%
+  filter(year >= 2014) %>%
+  mutate(RR = 1/(1-prob))
+
+RR
+
 
 # same plot for sst anomalies
 ersst.anom
