@@ -33,23 +33,26 @@ regional_weights <- regional_weights %>%
 ersst <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv")
 
 ersst <- ersst %>%
-  filter(year >= 1950) %>%
   select(region, year, annual.unsmoothed) %>%
   mutate(model = "ersst")
 
 models <- read.csv("./CMIP6/summaries/CMIP6.sst.time.series.csv")
 
 # combine models and ersst observations into "data"
+# data <- models %>% 
+#   filter(experiment == "hist_ssp585",
+#          year %in% 1950:2021) %>% # note that for regional warming we will calculate anomalies wrt 1950-1999 (beginning of trustworthy ERSST)
+#   select(region, year, annual.unsmoothed, model)
+
 data <- models %>% 
-  filter(experiment == "hist_ssp585",
-         year %in% 1950:2021) %>% # note that for regional warming we will calculate anomalies wrt 1950-1999 (beginning of trustworthy ERSST)
+  filter(experiment == "hist_ssp585") %>%
   select(region, year, annual.unsmoothed, model)
 
 data <- rbind(data, ersst) 
 
 # calculate 1950:1999 climatology for each model and ersst
 climatology <- data %>%
-  filter(year %in% 1950:1999) %>%
+  filter(year %in% 1850:1949) %>%
   group_by(region, model) %>%
   summarize(climatology.mean = mean(annual.unsmoothed), climatology.sd = sd(annual.unsmoothed))
 
@@ -123,9 +126,9 @@ form <-  bf(count | trials(N) + weights(total_weight, scale = TRUE) ~
 
 # loop through each region and fit model
 
-# for(i in 1:length(regions)){
-  for(i in 1:3){
-    i <- 1
+for(i in 1:length(regions)){
+  # for(i in 1:3){
+  #   i <- 1
 
 extremes_brms <- brm(form,
                  data = extremes[extremes$region == regions[i],],
@@ -133,7 +136,7 @@ extremes_brms <- brm(form,
                  seed = 1234,
                  cores = 4, chains = 4, iter = 15000,
                  save_pars = save_pars(all = TRUE),
-                 control = list(adapt_delta = 0.9, max_treedepth = 14))
+                 control = list(adapt_delta = 0.9, max_treedepth = 15))
   
 saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_extremes_binomial.rds", sep = ""))
 
@@ -142,7 +145,7 @@ saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_extremes_bin
 
 # evaluate all six regional models
 
-i <- 1
+i <- 2
 
 model <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_extremes_binomial.rds", sep = ""))
 
