@@ -15,7 +15,7 @@ theme_set(theme_bw())
 regions <- read.csv("./CMIP6/summaries/clean_region_names.csv")
 regions <- regions[1:6,1]
 
-for(i in 1:length(regions)){
+for(i in 3:length(regions)){
     # i <- 1
 ## load preindustrial and historical outcome for the GOA
 preindustrial <- read.csv(paste("./CMIP6/summaries/", regions[i], "_preindustrial_outcomes.csv", sep = ""))
