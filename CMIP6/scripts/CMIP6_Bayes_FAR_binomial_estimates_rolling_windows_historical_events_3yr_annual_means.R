@@ -15,8 +15,8 @@ theme_set(theme_bw())
 regions <- read.csv("./CMIP6/summaries/clean_region_names.csv")
 regions <- regions[1:6,1]
 
-# for(i in 2:length(regions)){
-    i <-5
+for(i in 1:length(regions)){
+    # i <-5
 ## load preindustrial and historical outcomes
 preindustrial <- read.csv(paste("./CMIP6/summaries/", regions[i], "_preindustrial_outcomes.csv", sep = ""))
 
@@ -85,7 +85,7 @@ far_brms2 <- brm(form,
 
 saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_3yr_mean_annual_sst_rolling_window_binomial2.rds", sep = ""))
 
-6# }
+ }
 ## ~2.5 hours run time
 
 far_brms2 <- readRDS("./CMIP6/brms_output/Gulf_of_Alaska_binomial2.rds")
