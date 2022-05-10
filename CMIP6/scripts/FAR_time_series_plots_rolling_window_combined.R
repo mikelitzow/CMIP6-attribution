@@ -134,6 +134,12 @@ far_pred_annual$window = "annual"
   
   far_pred_3yr$window <- "3yr_running_mean"
   
+  # save GOA 3yr for sockeye example
+  save_pred <- far_pred_3yr %>%
+    filter(region == "Gulf_of_Alaska")
+  
+  write.csv(save_pred, "./CMIP6/summaries/GOA_3yr_annual_FAR.csv", row.names = F)
+  
   far_pred <- rbind(far_pred_annual, far_pred_3yr)
   
   # reorder areas 
