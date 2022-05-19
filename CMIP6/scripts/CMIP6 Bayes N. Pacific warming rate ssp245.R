@@ -189,13 +189,6 @@ new.dat <- data.frame(warming = c(0.5, 1.0, 1.5, 2.0),
 
 pred <- posterior_epred(inverse_warming_brm, newdata = new.dat)
 
-uci <- function(x) quantile(x, 0.975)
-
-pred.summary <- data.frame(warming = new.dat$warming,
-                           year = colMeans(pred),
-                           UCI = apply(pred, 2, uci))
-
-
 ## SST anomaly predictions #### 95% CI
 ce1s_1 <- conditional_effects(inverse_warming_brm, effect = "warming", re_formula = NA,
                               probs = c(0.025, 0.975), resolution = 10000)
@@ -219,4 +212,4 @@ ggplot(pred.plot, aes(warming, year)) +
   labs(x = "North Pacific warming (°C)",
        y = "Year reached")
 
-ggsave("./CMIP6/figs/Bayes_estimated_warming_timing.png", width = 3, height = 4, units = 'in') 
+ggsave("./CMIP6/figs/Bayes_estimated_warming_timing_ssp_245.png", width = 3, height = 4, units = 'in') 
