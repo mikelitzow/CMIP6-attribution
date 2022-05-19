@@ -163,3 +163,46 @@ ggplot(plot.out, aes(year, value, color = region)) +
   geom_line() +
   facet_wrap(~name, scale = "free_y") +
   scale_color_manual(values = cb[c(2:6)])
+
+# get Kendall's tau for each and plot only correlation time series
+
+plot.out <- output %>%
+  select(-pdo.coeff, -npgo.coeff) %>%
+  rename(PDO = pdo.cor,
+         NPGO = npgo.cor)
+
+f.p <- function(x) cor.test(x,1969:2021, method="kendall")$p.value
+f.tau <- function(x) cor.test(x,1969:2021, method="kendall")$statistic
+
+
+test <- plot.out %>%
+  group_by(region) %>%
+  summarise(PDO_p = f.p(PDO),
+            PDO_tau = f.tau(PDO),
+            NPGO_p = f.p(NPGO),
+            NPGO_tau = f.tau(NPGO))
+
+test  # all of them are getting stonger!
+
+# and plot 
+
+plot.out <- plot.out %>%
+  pivot_longer(cols = c(-region, -year), values_to = "Correlation")
+
+plot.order <- data.frame(name = c("PDO", "NPGO"),
+                         order = c(1,2))
+
+plot.out <- left_join(plot.out, plot.order)
+
+plot.out$name <- reorder(plot.out$name, plot.out$order)
+
+ggplot(plot.out, aes(year, Correlation, color = region)) +
+  geom_line() +
+  facet_wrap(~name, scale = "free_y") +
+  scale_color_manual(values = cb[c(2:6)]) +
+  theme(axis.title.x = element_blank(),
+        legend.title = element_blank()) +
+  geom_hline(lty = 2, yintercept = 0)
+
+# and save 
+ggsave("./CMIP6/figs/internal_variability_far_correlations.png", width = 10, height = 3.5, units = 'in')
