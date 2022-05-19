@@ -126,8 +126,8 @@ form <-  bf(count | trials(N) + weights(total_weight, scale = TRUE) ~
 
 # loop through each region and fit model
 
-for(i in 1:length(regions)){
-  # for(i in 1:3){
+# for(i in 3:length(regions)){
+  for(i in 6:6){
   #   i <- 1
 
 extremes_brms <- brm(form,
@@ -145,7 +145,7 @@ saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_extremes_bin
 
 # evaluate all six regional models
 
-i <- 2
+i <- 6
 
 model <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_extremes_binomial.rds", sep = ""))
 
@@ -201,20 +201,39 @@ plot.dat <- left_join(plot.dat, period.order) %>%
   mutate(period = reorder(period, period.order))
 
 
-ggplot(plot.dat, aes(period, prob)) +
+# and change labels for facets!
+region_names <- c(
+  North_Pacific = "North Pacific",
+  Eastern_Bering_Sea = "Eastern Bering Sea",
+  Gulf_of_Alaska = "Gulf of Alaska",
+  British_Columbia_Coast = "British Columbia Coast",
+  Northern_California_Current = "Northern California Current",
+  Southern_California_Current = "Southern California Current"
+)
+
+
+# region_labeller <- function(variable,value){
+#   return(region_names[value])
+# }
+
+
+extremes.plot <- ggplot(plot.dat, aes(period, prob)) +
   geom_errorbar(aes(x = period, ymin = lower, ymax = upper), width = 0.3) +
   geom_point(color = "red", size = 4) +
-  facet_wrap(~region) +
+  facet_wrap(~region, labeller = labeller(region = region_names)) +
   scale_y_continuous(breaks=c(1,10,100,1000,10000),
-                     labels = c("10^0", "10^1", "10^2", "10^3", "> 10^4"),
+                     labels = c("1", "10", "100", "1000", ">10,000"),
                      minor_breaks = c(2:9, 
                                       seq(20, 90, by = 10),
                                       seq(200, 900, by = 100),
                                       seq(2000, 9000, by = 1000))) +
+  scale_x_discrete(labels = c("Preindustrial", "1950 to 0.5°", "0.5° to 1.0°", "1.0° to 1.5°", "1.5° to 2.0°")) +
   coord_trans(y = "pseudo_log") +
   ylab("Expected return time (years)") + 
   theme(axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 45,
                                    hjust = 1))
+
+extremes.plot
 
 ggsave("./CMIP6/figs/extreme_return_time.png", width = 6, height = 8, units = 'in')        
