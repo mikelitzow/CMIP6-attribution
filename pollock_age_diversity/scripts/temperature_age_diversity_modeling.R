@@ -1,4 +1,4 @@
-## effect of temperature on age diversity
+## effect of temperature on weight
 
 library(ggplot2)
 library(plyr)
@@ -7,78 +7,126 @@ library(mgcv)
 library(rstan)
 library(brms)
 library(bayesplot)
-source("./pollock_age_diversity/scripts/stan_utils.R")
+source("./scripts/stan_utils.R")
 
 
 ## Read in data --------------------------------------------
-data <- read.csv("./pollock_age_diversity/data/shannon.age.diversity.acoustic.trawl.data.csv",
-                 row.names = 1)
+data <- read.csv("./data/cohort_weight_age.csv")
 
-
-# add sst data
-sst <- read.csv("./pollock_age_diversity/data/goa.sst.csv",
-                row.names = 1)
-
-data <- left_join(data, sst)
-
-# drop missing years 
-data <- na.omit(data)
-  
+theme_set(theme_bw())
+cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 ## brms: setup ---------------------------------------------
 
-## Define model formulas - 
-## comparing three levels of smoothing in sst data
-## (annual means, 2-yr running means, 3-yr running means)
-age1_formula <-  bf(shannon ~ s(annual.sst, k = 4) + ar())
+## Define model formula 
 
-age2_formula <-  bf(shannon ~ s(two.yr.sst, k = 4) + ar())
+weight1_formula <-  bf(sc.weight ~  s(prevyr_annual.wSST, k=4) + maturity_table_3 +
+                         (1|year/Haul) + (1|cohort))
 
-age3_formula <-  bf(shannon ~ s(three.yr.sst, k = 4) + ar())
 
 
 ## Show default priors
-get_prior(age1_formula, data)
+get_prior(weight1_formula, data)
 
-
-## Set priors
-age_priors <- c(set_prior("normal(0.5, 3)", class = "ar"), # mean ar = 0.5
-                set_prior("normal(0, 3)", class = "b"),
-                set_prior("student_t(3, 0, 3)", class = "Intercept"),
-                set_prior("student_t(3, 0, 3)", class = "sds"),
-                set_prior("student_t(3, 0, 3)", class = "sigma"))
 
 ## fit models --------------------------------------
-age_sst1 <- brm(age1_formula,
-                 data = data,
-                 prior = age_priors,
-                 seed = 1234,
+weight_sst_female <- brm(weight1_formula,
+                 data = dplyr::filter(data, sex.code==2),
                  cores = 4, chains = 4, iter = 3000,
                  save_pars = save_pars(all = TRUE),
-                 control = list(adapt_delta = 0.99, max_treedepth = 10))
-saveRDS(age_sst1, file = "./pollock_age_diversity/output/age_sst1.rds")
+                 control = list(adapt_delta = 0.999, max_treedepth = 16))
 
-# age_sst1 <- add_criterion(age_sst1, "loo",
-#                                moment_match = TRUE)
+saveRDS(weight_sst_female, file = "./output/brm_weight_sst_female.rds")
 
-saveRDS(age_sst1, file = "./pollock_age_diversity/output/age_sst1.rds")
+weight_sst_male <- brm(weight1_formula,
+                         data = dplyr::filter(data, sex.code==1),
+                         cores = 4, chains = 4, iter = 3000,
+                         save_pars = save_pars(all = TRUE),
+                         control = list(adapt_delta = 0.999, max_treedepth = 16))
 
-age_sst1 <- readRDS("./pollock_age_diversity/output/age_sst1.rds")
-check_hmc_diagnostics(age_sst1$fit)
-neff_lowest(age_sst1$fit)
-rhat_highest(age_sst1$fit)
-summary(age_sst1)
-bayes_R2(age_sst1)
-plot(age_sst1$criteria$loo, "k")
-plot(conditional_smooths(age_sst1), ask = FALSE)
+saveRDS(weight_sst_male, file = "./output/brm_weight_sst_male.rds")
+
+
+
+weight_sst_female <- readRDS("./output/brm_weight_sst_female.rds")
+check_hmc_diagnostics(weight_sst_female$fit)
+neff_lowest(weight_sst_female$fit) # needs to be increased
+rhat_highest(weight_sst_female$fit)
+summary(weight_sst_female)
+bayes_R2(weight_sst_female)
+plot(weight_sst_female$criteria$loo, "k")
+plot(conditional_smooths(weight_sst_female), ask = FALSE)
+
 y <- data$shannon
-yrep_age_sst1  <- fitted(age_sst1, scale = "response", summary = FALSE)
-ppc_dens_overlay(y = y, yrep = yrep_age_sst1[sample(nrow(yrep_age_sst1), 25), ]) +
+yrep_weight_sst_female  <- fitted(weight_sst_female, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_weight_sst_female[sample(nrow(yrep_weight_sst_female), 25), ]) +
     xlim(0, 3) +
-    ggtitle("age_sst1")
-pdf("./pollock_age_diversity/figs/trace_age_sst1.pdf", width = 6, height = 4)
-    trace_plot(age_sst1$fit)
+    ggtitle("weight_sst_female")
+pdf("./pollock_age_diversity/figs/trace_weight_sst_female.pdf", width = 6, height = 4)
+    trace_plot(weight_sst_female$fit)
 dev.off()
+
+weight_sst_male <- readRDS("./output/brm_weight_sst_male.rds")
+check_hmc_diagnostics(weight_sst_male$fit)
+neff_lowest(weight_sst_male$fit) # needs to be increased
+rhat_highest(weight_sst_male$fit)
+summary(weight_sst_male)
+bayes_R2(weight_sst_male)
+plot(weight_sst_male$criteria$loo, "k")
+plot(conditional_smooths(weight_sst_male), ask = FALSE)
+
+#######################-------------
+# plot both
+## 95% CI
+ce1s_1 <- conditional_effects(weight_sst_female, effect = "prevyr_annual.wSST", re_formula = NA,
+                              probs = c(0.025, 0.975))
+
+dat_ce <- ce1s_1$prevyr_annual.wSST
+dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
+dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
+
+dat_ce$sex <- "female"
+
+# now male
+ce1s_1 <- conditional_effects(weight_sst_male, effect = "prevyr_annual.wSST", re_formula = NA,
+                              probs = c(0.025, 0.975))
+
+dat_ce2 <- ce1s_1$prevyr_annual.wSST
+dat_ce2[["upper_95"]] <- dat_ce[["upper__"]]
+dat_ce2[["lower_95"]] <- dat_ce[["lower__"]]
+
+dat_ce2$sex <- "male"
+
+plot_both <- rbind(dat_ce, dat_ce2)
+
+
+
+ggplot(plot_both) +
+  aes(x = effect1__, y = estimate__, fill = sex, color = sex) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.2, lty = 0) +
+  geom_line(size = 1) +
+  geom_hline(yintercept = 0, lty = 2) +
+  scale_color_manual(values = cb[c(2,6)]) +
+  scale_fill_manual(values = cb[c(2,6)]) +
+  labs(x = "Previous year SST", y = "Weight anomaly") 
+
+
+ggsave("./pollock_age_diversity/figs/three.yr_sst_predicted_age_diversity.png", width = 6, height = 4)
+
+
+
+########################------------
+y <- data$shannon
+yrep_weight_sst_male  <- fitted(weight_sst_male, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_weight_sst_male[sample(nrow(yrep_weight_sst_male), 25), ]) +
+  xlim(0, 3) +
+  ggtitle("weight_sst_male")
+pdf("./pollock_age_diversity/figs/trace_weight_sst_male.pdf", width = 6, height = 4)
+trace_plot(weight_sst_male$fit)
+dev.off()
+
+
+
 
 
 age_sst2 <- brm(age2_formula,
