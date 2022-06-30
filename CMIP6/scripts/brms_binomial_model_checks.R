@@ -38,8 +38,8 @@ trace_plot(model$fit)
 ##
 model <- readRDS("./CMIP6/brms_output/British_Columbia_Coast_rolling_window_binomial2.rds") # checks out
 
-check_hmc_diagnostics(model$fit)
-neff_lowest(model$fit) # intercept slightly low (978)
+check_hmc_diagnostics(model$fit) # 2 divergent transitions
+neff_lowest(model$fit) 
 rhat_highest(model$fit)
 summary(model)
 bayes_R2(model)
