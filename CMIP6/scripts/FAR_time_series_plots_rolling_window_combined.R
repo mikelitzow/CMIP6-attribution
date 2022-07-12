@@ -74,8 +74,108 @@ for(i in 1:length(regions)){ # loop through regions
 
 far_pred_annual$window = "annual"
   
+# save GOA version for pollock paper
+far_temp <- far_pred_annual %>%
+  filter(region == "Gulf_of_Alaska",
+         window == "annual") %>%
+  select(-region, -window) %>%
+  rename(Year = year,
+         Estimate = prob,
+         LCI = lower,
+         UCI = upper) %>%
+  mutate(variable = "Fraction of Attributable Risk")
 
+RR_temp <- data.frame(Year = far_temp$Year,
+                      Estimate = 1/(1-far_temp$Estimate),
+                      LCI = 1/(1-far_temp$LCI),
+                      UCI = 1/(1-far_temp$UCI),
+                      variable = "Risk ratio")
   
+xprt <- rbind(far_temp, RR_temp)
+
+
+write.csv(xprt,
+          "./CMIP6/summaries/GOA_annual_FAR_Risk_Ratio_with_uncertainty.csv", 
+          row.names = F)
+
+###################
+## additional aside - 2-yr smoothed winter FAR and Risk Ratio for GOA pollock study 
+
+far_pred_winter_2yr <- data.frame()
+
+# for(i in 1:length(regions)){ # loop through regions
+  
+  i <- 3
+  
+  # subset ersst.anom
+  ersst.temp <- ersst.anom %>%
+    filter(region == regions[i]) %>%
+    select(year, winter.anomaly.two.yr.running.mean) %>%
+    rename(winter.anomaly.2yr = winter.anomaly.two.yr.running.mean) %>%
+    na.omit()
+  
+  # load regional model
+  mod <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_2yr_mean_winter_sst_rolling_window_binomial2.rds", sep = ""))
+  
+  ## setup new data
+  nd <- data.frame(period = c("historical", "preindustrial"),
+                   ersst.year = rep(ersst.temp$year, each = 2),
+                   winter.anomaly.2yr = rep(ersst.temp$winter.anomaly.2yr, each = 2),
+                   N = 1000,
+                   model_fac = NA)
+  
+  nd_pre <- nd[nd$period == "preindustrial", ]
+  nd_his <- nd[nd$period == "historical", ]
+  
+  ## make predictions
+  ## exclude random effects for model_fac
+  pre_pp <- posterior_epred(mod, newdata = nd_pre, re_formula = NA)
+  his_pp <- posterior_epred(mod, newdata = nd_his, re_formula = NA)
+  
+  ## Calc probabilities
+  ## These are our posterior probabilities to use for FAR calculation
+  pre_prob <- pre_pp / unique(nd$N)
+  his_prob <- his_pp / unique(nd$N)
+  
+  
+  ## Calc FAR
+  far <- 1 - (pre_prob / his_prob)
+  range(far, na.rm = TRUE)
+  
+  
+  far_pred_winter_2yr <- rbind(far_pred_winter_2yr,
+                           data.frame(region = regions[i],
+                                      year = nd_pre$ersst.year,
+                                      prob = apply(far, 2, mean),
+                                      lower = apply(far, 2, quantile, probs = 0.025),
+                                      upper = apply(far, 2, quantile, probs = 0.975)))
+  
+
+
+# save for pollock paper
+far_temp <- far_pred_winter_2yr %>%
+  select(-region) %>%
+  rename(Year = year,
+         Estimate = prob,
+         LCI = lower,
+         UCI = upper) %>%
+  mutate(variable = "Fraction of Attributable Risk")
+
+RR_temp <- data.frame(Year = far_temp$Year,
+                      Estimate = 1/(1-far_temp$Estimate),
+                      LCI = 1/(1-far_temp$LCI),
+                      UCI = 1/(1-far_temp$UCI),
+                      variable = "Risk ratio")
+
+xprt <- rbind(far_temp, RR_temp)
+
+
+write.csv(xprt,
+          "./CMIP6/summaries/GOA_winter_2yr_FAR_Risk_Ratio_with_uncertainty.csv", 
+          row.names = F)
+
+
+############################
 ## now 3-yr running mean
   far_pred_3yr <- data.frame()
   
@@ -137,6 +237,66 @@ far_pred_annual$window = "annual"
   # save GOA 3yr for sockeye example
   save_pred <- far_pred_3yr %>%
     filter(region == "Gulf_of_Alaska")
+  
+### 
+# aside - winter 2-yr far for GOA pollock project
+
+  far_pred_3yr <- data.frame()
+  
+  for(i in 1:length(regions)){ # loop through regions
+    
+    # i <- 1
+    
+    # subset ersst.anom
+    ersst.temp <- ersst.anom %>%
+      filter(region == regions[i]) %>%
+      select(year, annual.anomaly.three.yr.running.mean) %>%
+      rename(annual.anomaly.3yr = annual.anomaly.three.yr.running.mean)
+    
+    # and drop NAs
+    keep <- !is.na(ersst.temp$annual.anomaly.3yr)
+    ersst.temp <- ersst.temp[keep,]
+    
+    # load regional model
+    mod <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_3yr_mean_annual_sst_rolling_window_binomial2.rds", sep = ""))
+    
+    ## setup new data
+    nd <- data.frame(period = c("historical", "preindustrial"),
+                     ersst.year = rep(ersst.temp$year, each = 2),
+                     annual.anomaly.3yr = rep(ersst.temp$annual.anomaly.3yr, each = 2),
+                     N = 1000,
+                     model_fac = NA)
+    
+    nd_pre <- nd[nd$period == "preindustrial", ]
+    nd_his <- nd[nd$period == "historical", ]
+    
+    ## make predictions
+    ## exclude random effects for model_fac
+    pre_pp <- posterior_epred(mod, newdata = nd_pre, re_formula = NA)
+    his_pp <- posterior_epred(mod, newdata = nd_his, re_formula = NA)
+    
+    ## Calc probabilities
+    ## These are our posterior probabilities to use for FAR calculation
+    pre_prob <- pre_pp / unique(nd$N)
+    his_prob <- his_pp / unique(nd$N)
+    
+    
+    ## Calc FAR
+    far <- 1 - (pre_prob / his_prob)
+    range(far, na.rm = TRUE)
+    
+    
+    far_pred_3yr <- rbind(far_pred_3yr,
+                          data.frame(region = regions[i],
+                                     year = nd_pre$ersst.year,
+                                     prob = apply(far, 2, mean),
+                                     lower = apply(far, 2, quantile, probs = 0.025),
+                                     upper = apply(far, 2, quantile, probs = 0.975)))
+    
+    
+  } # close i loop
+  
+  far_pred_3yr$window <- "3yr_running_mean"
   
   write.csv(save_pred, "./CMIP6/summaries/GOA_3yr_annual_FAR.csv", row.names = F)
   
