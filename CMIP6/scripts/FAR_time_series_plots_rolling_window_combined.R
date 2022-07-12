@@ -238,6 +238,33 @@ write.csv(xprt,
   save_pred <- far_pred_3yr %>%
     filter(region == "Gulf_of_Alaska")
   
+  
+  # save 3-yr FAR and RR for GOA pollock study
+
+  far_temp <- far_pred_3yr %>%
+    filter(region == "Gulf_of_Alaska",
+           window == "3yr_running_mean") %>%
+    select(-region, -window) %>%
+    rename(Year = year,
+           Estimate = prob,
+           LCI = lower,
+           UCI = upper) %>%
+    mutate(variable = "Fraction of Attributable Risk")
+  
+  RR_temp <- data.frame(Year = far_temp$Year,
+                        Estimate = 1/(1-far_temp$Estimate),
+                        LCI = 1/(1-far_temp$LCI),
+                        UCI = 1/(1-far_temp$UCI),
+                        variable = "Risk ratio")
+  
+  xprt <- rbind(far_temp, RR_temp)
+  
+  
+  write.csv(xprt,
+            "./CMIP6/summaries/GOA_3yr_annual_FAR_Risk_Ratio_with_uncertainty.csv", 
+            row.names = F)
+  
+  
 ### 
 # aside - winter 2-yr far for GOA pollock project
 
