@@ -50,7 +50,7 @@ data <- models %>%
 
 data <- rbind(data, ersst) 
 
-# calculate 1950:1999 climatology for each model and ersst
+# calculate 1850:1949 climatology for each model and ersst
 climatology <- data %>%
   filter(year %in% 1850:1949) %>%
   group_by(region, model) %>%
