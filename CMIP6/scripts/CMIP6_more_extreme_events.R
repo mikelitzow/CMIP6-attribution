@@ -18,6 +18,9 @@ ersst.max <- ersst.anom %>%
   group_by(region) %>%
   summarise(max.anomaly = max(annual.anomaly.unsmoothed))
 
+# and define the mean maximum observed across all six time series
+mean.max <- round(mean(ersst.max$max.anomaly), 1) # 4.02, rounding to 4 SD
+
 # load CMIP6 anomalies
 cmip.anom <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv")
 
@@ -60,7 +63,7 @@ for(i in 1:length(models)){ # start i loop (models)
                                     data.frame(model = models[i],
                                     region = regions[j],
                                     period = "preindustrial",
-                                    count = sum(pre.temp$annual.unsmoothed >= ersst.temp$max.anomaly, na.rm = T),
+                                    count = sum(pre.temp$annual.unsmoothed >= mean.max, na.rm = T),
                                     N = length(!is.na(pre.temp$annual.unsmoothed))))
  
     
@@ -107,7 +110,7 @@ for(i in 1:length(models)){ # start i loop (models)
                             data.frame(model = models[i],
                                        region = regions[j],
                                        period = "1950_to_0.5",
-                                       count = sum(hist.temp.use$annual.unsmoothed >= ersst.temp$max.anomaly, na.rm = T),
+                                       count = sum(hist.temp.use$annual.unsmoothed >= mean.max, na.rm = T),
                                        N = length(!is.na(hist.temp.use$annual.unsmoothed))))
   
   ## pull 0.5 - 1.0 degrees warming
@@ -123,7 +126,7 @@ for(i in 1:length(models)){ # start i loop (models)
                             data.frame(model = models[i],
                                        region = regions[j],
                                        period = "0.5_to_1.0",
-                                       count = sum(hist.temp.use$annual.unsmoothed >= ersst.temp$max.anomaly, na.rm = T),
+                                       count = sum(hist.temp.use$annual.unsmoothed >= mean.max, na.rm = T),
                                        N = length(!is.na(hist.temp.use$annual.unsmoothed))))
   
   ## pull 1.0 - 1.5 degrees warming
@@ -139,7 +142,7 @@ for(i in 1:length(models)){ # start i loop (models)
                             data.frame(model = models[i],
                                        region = regions[j],
                                        period = "1.0_to_1.5",
-                                       count = sum(hist.temp.use$annual.unsmoothed >= ersst.temp$max.anomaly, na.rm = T),
+                                       count = sum(hist.temp.use$annual.unsmoothed >= mean.max, na.rm = T),
                                        N = length(!is.na(hist.temp.use$annual.unsmoothed))))
   
   
@@ -156,7 +159,7 @@ for(i in 1:length(models)){ # start i loop (models)
                             data.frame(model = models[i],
                                        region = regions[j],
                                        period = "1.5_to_2.0",
-                                       count = sum(hist.temp.use$annual.unsmoothed >= ersst.temp$max.anomaly, na.rm = T),
+                                       count = sum(hist.temp.use$annual.unsmoothed >= mean.max, na.rm = T),
                                        N = length(!is.na(hist.temp.use$annual.unsmoothed))))
   
 
