@@ -124,22 +124,29 @@ regions <- unique(extremes$region)
 form <-  bf(count | trials(N) + weights(total_weight, scale = TRUE) ~
                 period + (1 | model_fac))
 
+
+# loop through each definition of extremes
+extreme.levels <- unique(extremes$extreme.level)
+
+for(x in 1:length(extreme.levels)){
+
 # loop through each region and fit model
 
-# for(i in 3:length(regions)){
-  for(i in 6:6){
+for(i in 1:length(regions)){
+
   #   i <- 1
 
 extremes_brms <- brm(form,
-                 data = extremes[extremes$region == regions[i],],
+                 data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
                  family = binomial(link = "logit"),
                  seed = 1234,
                  cores = 4, chains = 4, iter = 15000,
                  save_pars = save_pars(all = TRUE),
                  control = list(adapt_delta = 0.9, max_treedepth = 15))
   
-saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_extremes_binomial.rds", sep = ""))
+saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))
 
+}
 }
 
 
