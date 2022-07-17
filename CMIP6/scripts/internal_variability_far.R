@@ -184,6 +184,9 @@ test <- plot.out %>%
 
 test  # all of them are getting stonger!
 
+# save test output
+write.csv(test, "./CMIP6/summaries/Kendalls_tau_PDO_NPGO_FAR.csv", row.names = F)
+
 # and plot 
 
 plot.out <- plot.out %>%
