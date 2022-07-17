@@ -9,7 +9,7 @@ source("./CMIP6/scripts/stan_utils.R")
 
 theme_set(theme_bw())
 
-# load ersst warming wrt 1954-1949
+# load ersst warming wrt 1854-1949
 n.pac.obs.warming <- read.csv("./CMIP6/summaries/north_pacific_annual_observed_sst.csv",
                               row.names = 1)
 
