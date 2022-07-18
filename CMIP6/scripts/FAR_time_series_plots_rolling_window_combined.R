@@ -359,6 +359,22 @@ write.csv(xprt,
   
 ggsave("./CMIP6/figs/FAR_rolling_window_time_series_annual_3yr.png", height = 4.5, width = 10, units = 'in')  
 
+
+# last 15 years
+
+g <- ggplot(filter(far_pred, year %in% 2007:2021)) +
+  geom_line(aes(x = year, y = prob, color = window), size = 0.25) +
+  geom_ribbon(aes(x = year, ymin = lower, ymax = upper, fill = window), alpha = 0.15) +
+  facet_wrap(~region, scales = "free_y") +
+  ylab("Fraction of Attributable Risk") +
+  theme(axis.title.x = element_blank()) +
+  scale_color_manual(values = cb[c(2,6)]) +
+  scale_fill_manual(values = cb[c(2,6)])
+
+print(g)
+
+
+
 # temporary version for talk
 far_pred <- far_pred %>%
   filter(window == "annual",
