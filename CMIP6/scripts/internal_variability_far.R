@@ -209,3 +209,34 @@ ggplot(plot.out, aes(year, Correlation, color = region)) +
 
 # and save 
 ggsave("./CMIP6/figs/internal_variability_far_correlations.png", width = 10, height = 3.5, units = 'in')
+
+## EBS and GOA - RR for 76/77 PDO event-----------------------
+
+# load RR 
+RR <- read.csv("./CMIP6/summaries/complete_FAR_RR_time_series_with_uncertainty.csv")
+
+# clean up 
+dat <- RR %>%
+  filter(region %in% c("Eastern_Bering_Sea", "Gulf_of_Alaska"),
+         window_plot == 'Annual SST', 
+         year %in% 1967:1986) %>%
+  select(region, year, FAR, RR)
+
+pdo <- read.csv("./CMIP6/data/pdo.csv")
+
+pdo <- pdo %>%
+  mutate(year = as.numeric(as.character(chron::years(date)))) %>%
+  group_by(year) %>%
+  summarize(PDO = mean(pdo))
+
+dat <- left_join(dat, pdo)
+
+ggplot(dat, aes(PDO, FAR)) +
+  geom_point() +
+  geom_smooth(method = "gam", se = F) +
+  facet_wrap(~region, scales = "free_y", ncol = 1)
+
+ggplot(dat, aes(PDO, RR)) +
+  geom_point() +
+  geom_smooth(method = "gam", se = F) +
+  facet_wrap(~region, scales = "free_y", ncol = 1)
