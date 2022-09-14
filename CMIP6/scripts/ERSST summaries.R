@@ -51,6 +51,8 @@ lon <- rep(x, each = length(y))
 dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
 
 # plot to check
+png("./CMIP6/figs/study_site.png", width = 6, height = 6, units = 'in', res = 300)
+
 
 temp.mean <- colMeans(SST, na.rm=T)
 z <- t(matrix(temp.mean,length(y)))
@@ -89,6 +91,7 @@ scc.y <- c(41, 33, 33, 39, 41, 41)
 
 polygon(scc.x, scc.y, border = "red", lwd = 2)
 
+dev.off()
 # those  areas look fine
 
 # define cells within each polygon and plot to check
