@@ -32,6 +32,8 @@ dates <- temps  <- matrix()
 experiment.file <- data.frame()
 files.new <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp245")
 
+length(files.new)
+
 # make function to calculate cell weights
 cell.weight <- function(x)  sqrt(cos(x*pi/180))
 
