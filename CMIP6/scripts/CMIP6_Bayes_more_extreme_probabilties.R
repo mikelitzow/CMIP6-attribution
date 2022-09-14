@@ -128,42 +128,96 @@ form <-  bf(count | trials(N) + weights(total_weight, scale = TRUE) ~
 # loop through each definition of extremes
 extreme.levels <- unique(extremes$extreme.level)
 
-for(x in 1:length(extreme.levels)){
+# for(x in 1:length(extreme.levels)){
+check <- extremes %>%
+  filter(region == "North_Pacific", extreme.level == 4)
 
+
+View(check)
+
+x <- 1
 # loop through each region and fit model
 
-for(i in 1:length(regions)){
+# for(i in 1:length(regions)){
 
-  #   i <- 1
+    i <- 1
 
 extremes_brms <- brm(form,
                  data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
                  family = binomial(link = "logit"),
-                 seed = 1234,
+                 seed = 1299,
                  cores = 4, chains = 4, iter = 15000,
                  save_pars = save_pars(all = TRUE),
-                 control = list(adapt_delta = 0.9, max_treedepth = 15))
+                 control = list(adapt_delta = 0.9, max_treedepth = 16))
   
 saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))
 
-}
-}
+# }
+# }
+
+##
+
+x <- 2
+
+i <- 3
+
+extremes_brms <- brm(form,
+                     data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
+                     family = binomial(link = "logit"),
+                     seed = 1234,
+                     cores = 4, chains = 4, iter = 20000,
+                     save_pars = save_pars(all = TRUE),
+                     control = list(adapt_delta = 0.9, max_treedepth = 18))
+
+saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))#
 
 
-# evaluate all six regional models
+##
+x <- 2
+
+i <- 4
+
+extremes_brms <- brm(form,
+                     data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
+                     family = binomial(link = "logit"),
+                     seed = 1234,
+                     cores = 4, chains = 4, iter = 20000,
+                     save_pars = save_pars(all = TRUE),
+                     control = list(adapt_delta = 0.9, max_treedepth = 18))
+
+saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))#
+
+##
+x <- 2
 
 i <- 6
 
-model <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_extremes_binomial.rds", sep = ""))
+extremes_brms <- brm(form,
+                     data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
+                     family = binomial(link = "logit"),
+                     seed = 1234,
+                     cores = 4, chains = 4, iter = 20000,
+                     save_pars = save_pars(all = TRUE),
+                     control = list(adapt_delta = 0.9, max_treedepth = 18))
 
-check_hmc_diagnostics(model$fit)
-neff_lowest(model$fit) # N. Pac, EBS and GOA are low
+saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))#
+
+# evaluate all six regional models
+
+i <- 1
+x <- 1
+
+model <- readRDS(paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))
+
+check_hmc_diagnostics(model$fit) # N. Pac. SD4, GOA SD5, BC SD5, SCC SD5 increase tree_depth
+neff_lowest(model$fit) # N. Pac. SD4, GOA SD5, BC SD4, BC SD5, SSC SD5 are low
 rhat_highest(model$fit)
 summary(model)
 bayes_R2(model) 
 trace_plot(model$fit)
 
 # and plot all six
+
 new.dat <- data.frame(period = unique(extremes$period),
                       model = NA,
                       N = 1000) 
@@ -172,6 +226,8 @@ plot.dat <- data.frame()
 
 for(i in 1:length(regions)){
 # i <- 1
+  
+ for(j in 1:length(extreme.levels)){
 
 model <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_extremes_binomial.rds", sep = ""))
 
@@ -179,20 +235,22 @@ probs <- posterior_epred(model, newdata = new.dat, re_formula = NA)/1000 # dive 
 
 plot.dat <- rbind(plot.dat,
                   data.frame(region = regions[i],
+                             level = extreme.levels[j],
                              period = new.dat$period,
                              prob = apply(probs, 2, median),
                              lower = apply(probs, 2, quantile, probs = 0.025),
                              upper = apply(probs, 2, quantile, probs = 0.975)))
 }
 
+}
 # calculate inverse to get expected return time
-plot.dat[,c(3:5)] <- 1/plot.dat[,c(3:5)]
+plot.dat[,c(4:6)] <- 1/plot.dat[,c(4:6)]
 
 # and change values above 10^4 to 10^4
 
-change <- plot.dat[,c(3:5)] > 10^4
+change <- plot.dat[,c(4:6)] > 10^4
 
-plot.dat[,c(3:5)][change] <- 10^4
+plot.dat[,c(4:6)][change] <- 10^4
 
 # set regions and periods in order
 region.order <- data.frame(region = regions,
@@ -222,11 +280,12 @@ region_names <- c(
 # region_labeller <- function(variable,value){
 #   return(region_names[value])
 # }
+pos_dodge = position_dodge(width = 0.2)
 
-
-extremes.plot <- ggplot(plot.dat, aes(period, prob)) +
-  geom_errorbar(aes(x = period, ymin = lower, ymax = upper), width = 0.3) +
-  geom_point(color = "red", size = 4) +
+extremes.plot <- ggplot(plot.dat, aes(period, prob, color = as.factor(level))) +
+  geom_errorbar(aes(x = period, ymin = lower, ymax = upper), width = 0.3, position = pos_dodge) +
+  geom_point(size = 4, position = pos_dodge) +
+  scale_color_manual(values = cb[c(3,4)]) +
   facet_wrap(~region, labeller = labeller(region = region_names)) +
   scale_y_continuous(breaks=c(1,10,100,1000,10000),
                      labels = c("1", "10", "100", "1000", ">10,000"),
