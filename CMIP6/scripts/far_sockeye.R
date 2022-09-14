@@ -13,18 +13,51 @@ theme_set(theme_bw())
 data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far.csv")
 
 # plot time series and experienced FAR
+ggplot(data, aes(annual_far_3, log_catch)) +
+  geom_point()
+
+# add RR
+data <- data %>%
+  mutate(RR = 1 / (1-annual_far_3),
+         log_RR = log(RR, 10))
+
+ggplot(data, aes(log_RR, log_catch)) +
+  geom_point()
+
 plot.dat <- data %>%
   select(year, annual_far_3, log_catch) %>%
-  rename('Ocean entry FAR' = annual_far_3,
-         'Log(catch)' = log_catch) %>%
+  rename('a) Ocean entry FAR' = annual_far_3,
+         'b) Log(catch)' = log_catch) %>%
   pivot_longer(cols = -year) %>%
-  mutate(order = if_else(name == "Log(catch)", 2, 1),
+  mutate(order = if_else(name == "b) Log(catch)", 2, 1),
          name = reorder(name, order))
 
-ggplot(plot.dat, aes(year, value)) +
+far_catch <- ggplot(plot.dat, aes(year, value)) +
   geom_point(size = 2) +
   geom_line() +
-  facet_wrap(~name, scale = "free_y", ncol = 1)
+  facet_wrap(~name, scale = "free_y", ncol = 1) +
+  theme(axis.title.x = element_blank()) +
+  ylab("Value") 
+
+far_catch
+
+# separate plots for FAR and catch
+
+far_plot <- ggplot(data, aes(year, annual_far_3)) +
+  geom_point(size = 2) +
+  geom_line() +  
+  theme(axis.title.x = element_blank()) +
+  labs(y = "Ocean entry FAR", tag = "A")
+
+far_plot
+
+catch_plot <- ggplot(data, aes(year, log_catch)) +
+  geom_point(size = 2) +
+  geom_line() +  
+  theme(axis.title.x = element_blank()) +
+  labs(y = "Log sockeye catch", tag = "B")
+
+catch_plot
 
 ## brms: setup ---------------------------------------------
 
@@ -162,9 +195,20 @@ print(g2)
 ## fit third model with categorical FAR -----------------------------
 
 
-# add categorical variable - is FAR above or below 0.95?
-data <- data %>%
-  mutate(far_fac = as.factor(if_else(annual_far_3 > 0.95, "above", "below")))
+# add categorical variable - is FAR above or below 0.98?
+
+# examine FAR distribution
+ggplot(data, aes(annual_far_3)) +
+  geom_histogram(fill = "grey", color = "black", bins = 14)
+
+far_check <- data %>%
+  arrange(desc(annual_far_3))
+
+far_check # supports 0.98 as a cutoff
+
+
+  data <- data %>%
+  mutate(far_fac = as.factor(if_else(annual_far_3 > 0.98, "above", "below")))
 
 sockeye_form3 <- bf(log_catch_stnd ~ 1 + far_fac + ar(time = year, p = 1))
 
@@ -224,11 +268,12 @@ plot$far_fac <- reorder(plot$far_fac, desc(plot$far_fac))
 g3 <- ggplot(plot, aes(far_fac, estimate__)) +
   geom_point(size=3) +
   geom_errorbar(aes(ymin=lower__, ymax=upper__), width=0.3, size=0.5) +
-  ylab("Log (catch) anomaly") +
-  xlab("FAR") +
+  ylab("Log catch anomaly") +
+  xlab("Fraction of Attibutable Risk (FAR)") +
   geom_hline(yintercept = 0, lty = 2) +
-  scale_x_discrete(labels=c(expression("<0.95"), expression("">=0.95))) +
-  theme_bw()
+  scale_x_discrete(labels=c(expression(""<=0.91), expression("">=0.98))) +
+  theme_bw() + 
+  labs(tag = "C")
 
 print(g3)
 
@@ -411,7 +456,7 @@ models <- read.csv("./CMIP6/summaries/CMIP6.sst.time.series.csv")
 data <- models %>% 
   filter(experiment == "hist_ssp585",
          region == "Gulf_of_Alaska",
-         year %in% 1850:2021) %>% # note that for regional warming we will calculate anomalies wrt 1950-1999 (beginning of trustworthy ERSST)
+         year %in% 1850:2021) %>% 
   select(year, annual.unsmoothed, model)
 
 data <- rbind(data, ersst) 
@@ -779,15 +824,50 @@ resample.pdf <- left_join(resample.pdf, plot.order) %>%
 
 # and plot
 
+# get good labels for each warming period
+labs <- data.frame(period = unique(resample.pdf$period),
+                   plot_period = c("Preindustrial",
+                                   "1950 to 0.5°",
+                                   "0.5° to 1.0°",
+                                   "1.0° to 1.5°",
+                                   "1.5° to 2.0°"),
+                   plot_order = 1:5)
+
+resample.pdf <- left_join(resample.pdf, labs) %>%
+  mutate(plot_period = reorder(plot_period, plot_order))
+
+
 cb <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-ggplot(resample.pdf, aes(period, anomaly)) +
+pdf_plot <- ggplot(resample.pdf, aes(plot_period, anomaly)) +
   geom_violin(fill = cb[6], lty = 0, alpha = 0.5) +
   coord_flip() +
   xlab("North Pacific warming") +
-  ylab("Anomaly (Std. Dev.)") +
-  geom_hline(yintercept = ersst.max, lty = 2) 
+  ylab("SST anomaly (Std. Dev.)") +
+  geom_hline(yintercept = ersst.max, lty = 2) +
+  labs(tag = "D")
+
+pdf_plot
+
+# and get summary statistics (proportion above ersst.max threshold)
+
+summary_pdf <- resample.pdf %>%
+  group_by(period) %>%
+  summarise(proportion = sum(anomaly >= ersst.max) / length(anomaly))
+
+summary_pdf
 
 
 ggsave("./CMIP6/figs/sockeye_anomaly_pdfs.png", width = 3, height = 3, units = 'in')        
+
+# combine plots
+
+void_plot <- ggplot() + theme_void()
+
+png("./CMIP6/figs/combined_sockeye_FAR_plot.png", width = 9, height = 7, units = 'in', res = 300)
+
+ggpubr::ggarrange(ggpubr::ggarrange(far_plot,  catch_plot, ggpubr::ggarrange(void_plot, g3, ncol = 2, widths = c(0.3, 0.7)), ncol = 1),
+pdf_plot, ncol = 2, widths = c(0.45, 0.55))
+
+dev.off()
 
