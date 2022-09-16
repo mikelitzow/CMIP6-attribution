@@ -352,6 +352,8 @@ far_pred_annual$window = "annual"
   far_pred <- left_join(far_pred, window.order)
   
   far_pred$window_plot <- reorder(far_pred$window_plot, far_pred$window.order)
+
+  write.csv(far_pred, file = "./CMIP6/summaries/fig1_far_pred.csv", row.names = FALSE)
   
   g <- ggplot(far_pred) +
     geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
