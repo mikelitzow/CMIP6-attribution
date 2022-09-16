@@ -263,6 +263,12 @@ print(gmap)
 
 ## Setup time series data
 far_pred <- read.csv("./CMIP6/summaries/fig1_far_pred.csv")
+far_pred$region_plot <- factor(far_pred$region_plot, levels = c("North Pacific",
+                                                                "Eastern Bering Sea",
+                                                                "Gulf of Alaska",
+                                                                "British Columbia Coast",
+                                                                "Northern California Current",
+                                                                "Southern California Current"))
 
 gts <- ggplot(far_pred) +
     geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
