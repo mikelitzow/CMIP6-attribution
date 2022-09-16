@@ -10,7 +10,8 @@ source("./CMIP6/scripts/stan_utils.R")
 theme_set(theme_bw())
 
 ## Read in data --------------------------------------------
-data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far.csv")
+# data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far.csv")
+data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far_no_south_peninsula.csv")
 
 # plot time series and experienced FAR
 ggplot(data, aes(annual_far_3, log_catch)) +
@@ -104,7 +105,7 @@ yrep_sockeye_model1  <- fitted(sockeye_model1, scale = "response", summary = FAL
 ppc_dens_overlay(y = y, yrep = yrep_sockeye_model1[sample(nrow(yrep_sockeye_model1), 25), ]) +
   ggtitle("sockeye_model1")
 
-trace_plot(sockeye_model$fit)
+trace_plot(sockeye_model1$fit)
 
 ## refit with cor, not cov in ar() ---------------------
 
@@ -157,13 +158,13 @@ trace_plot(sockeye_model2$fit)
 
 ## 95% CI
 ce1s_1 <- conditional_effects(sockeye_model2, effect = "annual_far_3", re_formula = NA,
-                              probs = c(0.025, 0.975))
+                              prob = 0.95)
 ## 90% CI
 ce1s_2 <- conditional_effects(sockeye_model2, effect = "annual_far_3", re_formula = NA,
-                              probs = c(0.05, 0.95))
+                              prob = 0.9)
 ## 80% CI
 ce1s_3 <- conditional_effects(sockeye_model2, effect = "annual_far_3", re_formula = NA,
-                              probs = c(0.1, 0.9))
+                              prob = 0.8)
 dat_ce <- ce1s_1$annual_far_3
 
 #########################
@@ -258,7 +259,7 @@ trace_plot(sockeye_model3$fit)
 
 ## 95% CI
 ce1s_1 <- conditional_effects(sockeye_model3, effect = "far_fac", re_formula = NA,
-                              probs = c(0.025, 0.975))  
+                              prob = 0.95)  
 
 plot <- ce1s_1$far_fac %>%
   select(far_fac, estimate__, lower__, upper__)
