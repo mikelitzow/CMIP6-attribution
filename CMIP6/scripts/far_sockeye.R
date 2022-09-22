@@ -56,7 +56,7 @@ catch_plot <- ggplot(data, aes(year, log_catch)) +
   geom_point(size = 2) +
   geom_line() +  
   theme(axis.title.x = element_blank()) +
-  labs(y = "Log sockeye catch", tag = "B")
+  labs(y = "Ln(sockeye catch)", tag = "B")
 
 catch_plot
 
@@ -269,7 +269,7 @@ plot$far_fac <- reorder(plot$far_fac, desc(plot$far_fac))
 g3 <- ggplot(plot, aes(far_fac, estimate__)) +
   geom_point(size=3) +
   geom_errorbar(aes(ymin=lower__, ymax=upper__), width=0.3, size=0.5) +
-  ylab("Log catch anomaly") +
+  ylab("Ln(catch anomaly)") +
   xlab("Fraction of Attibutable Risk (FAR)") +
   geom_hline(yintercept = 0, lty = 2) +
   scale_x_discrete(labels=c(expression(""<=0.91), expression("">=0.98))) +
