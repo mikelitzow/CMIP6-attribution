@@ -95,12 +95,6 @@ convert_coords <- function(data,
 
 
 
-
-
-
-
-
-
 ## load and process ERSST ----------------------------------
 # load and process SST data
 nc <- nc_open("./CMIP6/data/nceiErsstv5_c5fc_6a40_5e5b.nc")
@@ -234,9 +228,13 @@ poly.bc <- convert_coords(poly.bc, proj.wgs, target_crs, "x", "y")
 poly.ncc <- convert_coords(poly.ncc, proj.wgs, target_crs, "x", "y")
 poly.scc <- convert_coords(poly.scc, proj.wgs, target_crs, "x", "y")
 
+xlim <- range(dfc$easting_m)
+ylim <- range(dfc$northing_m)
+ylim[1] <- ylim[1] + (0.02 * ylim[1])
+ylim[2] <- ylim[2] + (0.02 * ylim[2])
 
 gmap <- ggplot(dfc) +
-    geom_tile(aes(x = easting_m, y = northing_m, fill = z)) +
+    geom_raster(aes(x = easting_m, y = northing_m, fill = z)) +
     geom_contour(aes(x = easting_m, y = northing_m, z = z), color = "black", na.rm = TRUE, size = 0.1) +
     geom_sf(data = world4,
             fill = "lightyellow3", color = "grey30", size = 0.2) +
@@ -245,9 +243,10 @@ gmap <- ggplot(dfc) +
     geom_polygon(data = poly.bc, aes(x = easting_m, y = northing_m), color = "red", fill = NA, size = 1.0) +
     geom_polygon(data = poly.ncc, aes(x = easting_m, y = northing_m), color = "red", fill = NA, size = 1.0) +
     geom_polygon(data = poly.scc, aes(x = easting_m, y = northing_m), color = "red", fill = NA, size = 1.0) +
-    scale_x_continuous(limits = c(range(dfc$easting_m)), expand = c(0, 0)) +
-    scale_y_continuous(limits = c(min(dfc$northing_m), max(dfc$northing_m)), expand = c(0, 0)) +
+    scale_x_continuous(limits = xlim, expand = c(-0.01, 0)) +
+    scale_y_continuous(limits = ylim, expand = c(-0.01, 0)) +
     scale_fill_gradientn(colors = new.col) +
+    coord_sf(expand = TRUE) +
     # labs(x = "", y = "", fill = expression(paste('', degree, C))) +
     labs(x = "", y = "", fill = "") +
     # theme(legend.position="top")
@@ -283,6 +282,7 @@ gts <- ggplot(far_pred) +
 print(gts)
 
 
+# gc <- gmap / gts + plot_layout(heights = unit(c(3, 1), c('in', 'null')))
 gc <- gmap / gts
 print(gc)
 ggsave("./CMIP6/figs/fig1_combined.png", width = 5, height = 7)
