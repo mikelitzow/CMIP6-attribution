@@ -52,6 +52,19 @@ far_plot <- ggplot(data, aes(year, annual_far_3)) +
 
 far_plot
 
+# alternate plot for stakeholder talk
+alt_plot <- ggplot(data, aes(year, annual_far_3)) +
+  geom_point(size = 2) +
+  geom_line() +  
+  theme(axis.title.x = element_blank()) +
+  labs(y = "% human risk") +
+  scale_y_continuous(breaks = c(0.4, 0.6, 0.8, 1.0),
+                     labels = c("40%", "60%", "80%", "100%"))
+
+alt_plot
+
+ggsave("./CMIP6/figs/alternate_FAR_plot_stakeholders.png", width = 6, height = 4, units = 'in')
+
 catch_plot <- ggplot(data, aes(year, log_catch)) +
   geom_point(size = 2) +
   geom_line() +  
@@ -59,6 +72,27 @@ catch_plot <- ggplot(data, aes(year, log_catch)) +
   labs(y = "Ln(sockeye catch)", tag = "B")
 
 catch_plot
+
+# alternate for stakeholders
+alt_catch_plot <- ggplot(data, aes(year, log_catch)) +
+  geom_point(size = 2) +
+  geom_line() +  
+  theme(axis.title.x = element_blank()) +
+  labs(y = "Millions of fish") +
+  scale_y_continuous(breaks = c(15.5, 16, 16.5),
+                     labels = c(round(exp(15.5)/1e6, 1), 
+                                round(exp(16)/1e6, 1),
+                                round(exp(16.5)/1e6, 1)))
+
+alt_catch_plot
+
+# save combined
+png("./CMIP6/figs/combined_stakeholder_sockeye_plot.png", width = 4, height = 4, units = 'in', res = 300)
+
+ggpubr::ggarrange(alt_plot, alt_catch_plot, ncol = 1)
+
+dev.off()
+
 
 ## brms: setup ---------------------------------------------
 
@@ -280,7 +314,33 @@ print(g3)
 
 ggsave("./CMIP6/figs/FAR_sockeye_categorical.png", width=1.5, height=2, units='in')
 
+# alternate plot for stakeholders
+mu <- 16.19
+sd <- 0.345
+
+
+alt_g3 <- ggplot(plot, aes(far_fac, estimate__)) +
+  geom_point(size=3) +
+  geom_errorbar(aes(ymin=lower__, ymax=upper__), width=0.3, size=0.5) +
+  ylab("Millions of fish") +
+  xlab("% of human risk") +
+  scale_y_continuous(breaks = c(0, -1, -2),
+                     labels = c(round(exp(mu)/1e6, 1),
+                                round(exp(mu-sd)/1e6, 1),
+                                round(exp(mu-2*sd)/1e6, 1))) +
+scale_x_discrete(labels=c("< 91%", "> 98%")) +
+  theme_bw() 
+
+print(alt_g3)
+
+ggsave("./CMIP6/figs/alt_FAR_sockeye_categorical.png", width=3, height=2.5, units='in')
+
+
 ## expected return time ----------------------------------------
+
+
+
+
 
 # load ersst anomalies
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
