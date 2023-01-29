@@ -1,4 +1,4 @@
-# subset CMIP6 by region and evaluate models
+# weight CMIP6 by climatology, change in temperature, annual SD, and annual autocorrelation
 
 library(tidyverse)
 library(ncdf4)
@@ -9,6 +9,7 @@ library(chron)
 library(fields)
 library(oce)
 
+
 # set palette
 new.col <- oceColorsPalette(64)
 
@@ -17,6 +18,16 @@ theme_set(theme_bw())
 
 ## set up processing  ---------------------
 
+# load interpolated ERSST data
+ersst <- read.csv("./CMIP6/data/interpolated_ERSST.csv")
+
+ersst <- ersst %>%
+  mutate(year = lubridate::year(date)) %>%
+  filter(year %in% 1900:1949) %>%
+  mutate(lat_long = paste("N", lat, "_E", lon, sep = "")) %>%
+  group_by(lat_long) %>%
+  summarize(mean_sst = mean(sst))
+
 # load polygons for subsetting each model
 regional.polygons <- read.csv("./CMIP6/summaries/regional_polygons.csv")
 
@@ -24,10 +35,10 @@ regional.polygons <- read.csv("./CMIP6/summaries/regional_polygons.csv")
 regions <- unique(regional.polygons$region)
 
 # loop through each file, save the file name and experiment,
-# capture the time series of raw temps for area of interest for each file-experiment comparison
+# subset by region, and calculate RMSE 1900-1949 climatology
 
 # objects for saving dates and temps and file-experiment ID from each realization
-dates <- temps  <- matrix()
+climatology_weights <- data.frame()
 experiment.file <- data.frame()
 files.new <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585")
 
@@ -39,16 +50,13 @@ cell.weight <- function(x)  sqrt(cos(x*pi/180))
 # and function to calculate weighted means with these weights 
 weighted.cell.mean <- function(x) weighted.mean(x, weights, na.rm = T)
 
-# load vector of clean region names to match with ERSST summaries
-region.names <- read.csv("./CMIP6/summaries/clean_region_names.csv") 
+# # load vector of clean region names to match with ERSST summaries
+# region.names <- read.csv("./CMIP6/summaries/clean_region_names.csv") 
 
 ## begin with full North Pacific grid --------------------------
 
-# create blank df to hold time series of sst and anomalies wrt 1950-1999
-CMIP6.sst.time.series <- CMIP6.anomaly.time.series <- data.frame()
-
 for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
-
+i <- 1
   path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.new[i], sep="")
   
   # load file
@@ -60,7 +68,7 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   experiments <-  ncvar_get(nc, "experiment", verbose = F)
   
   for(j in 1:length(experiments)){ # start j loop (each experiment)
-
+  j <- 1
   # extract dates
 
   d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
@@ -86,7 +94,6 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
     SST <- SST - 273.15
     
   }
-  
   
   
   # Keep track of corresponding latitudes and longitudes of each column:
