@@ -1,6 +1,5 @@
-# evaluate CMIP6 models in terms of
-# bias, correlation, and autocorrelation
-# for each region
+# subset CMIP6 by region and weight models according 
+# to the methods of Knutti et al. 2017 and Zhao et al. 2022
 
 library(tidyverse)
 
