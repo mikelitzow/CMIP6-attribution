@@ -548,3 +548,9 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
     
   } # close k loop (regions)
 } # close i loop (models)
+
+# combine outputs and save
+
+output <- rbind(climatology_rmse, sd_rmse, ar_rmse, climatology_change_rmse)
+
+write.csv(output, "./CMIP6/summaries/gridded_interpolated_model_weighting_RMSE.csv", row.names = F)
