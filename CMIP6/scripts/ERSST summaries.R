@@ -20,12 +20,13 @@ theme_set(theme_bw())
 
 ## load and process ERSST ------------------------
 
-# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2021-12-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(66)][(110):1:(250)]", "~temp")
+# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2022-12-01T00:00:00Z)][(0.0):1:(0.0)][(10):1:(66)][(110):1:(250)]", "~temp")
 
 # load and process SST data
 # nc <- nc_open("~temp")
 
-nc <- nc_open("./CMIP6/data/nceiErsstv5_c5fc_6a40_5e5b.nc")
+# full North Pacific, 1854-2022
+nc <- nc_open("./CMIP6/data/nceiErsstv5_c9f8_ba40_0c79.nc")
 
 # process
 
@@ -300,13 +301,13 @@ for(i in 1: length(sst.data.names)){
   # combine into data frame of time series by region
   temp.time.series <- rbind(temp.time.series,
                             data.frame(region = sst.clean.names[i],
-                                       year = 1854:2021,
+                                       year = 1854:2022,
                                        annual.unsmoothed = temp.annual,
                                        annual.two.yr.running.mean = temp.2yr,
                                        annual.three.yr.running.mean = temp.3yr,
-                                       winter.unsmoothed = temp.winter[names(temp.winter) %in% 1854:2021],
-                                       winter.two.yr.running.mean = temp.winter.2yr[names(temp.winter) %in% 1854:2021],
-                                       winter.three.yr.running.mean = temp.winter.3yr[names(temp.winter) %in% 1854:2021]))
+                                       winter.unsmoothed = temp.winter[names(temp.winter) %in% 1854:2022],
+                                       winter.two.yr.running.mean = temp.winter.2yr[names(temp.winter) %in% 1854:2022],
+                                       winter.three.yr.running.mean = temp.winter.3yr[names(temp.winter) %in% 1854:2022]))
 
   ## now calculate the data as anomalies wrt 1854-1949
   # calculate annual anomalies
@@ -334,13 +335,13 @@ for(i in 1: length(sst.data.names)){
   # combine into data frame of time series by region
   temp.anomaly.time.series <- rbind(temp.anomaly.time.series,
                             data.frame(region = sst.clean.names[i],
-                                       year = 1854:2021,
+                                       year = 1854:2022,
                                        annual.anomaly.unsmoothed = temp.annual.anom,
                                        annual.anomaly.two.yr.running.mean = temp.anom.2yr,
                                        annual.anomaly.three.yr.running.mean = temp.anom.3yr,
-                                       winter.anomaly.unsmoothed = temp.winter.anom[names(temp.winter.anom) %in% 1854:2021],
-                                       winter.anomaly.two.yr.running.mean = temp.winter.anom.2yr[names(temp.winter.anom) %in% 1854:2021],
-                                       winter.anomaly.three.yr.running.mean = temp.winter.anom.3yr[names(temp.winter.anom) %in% 1854:2021]))
+                                       winter.anomaly.unsmoothed = temp.winter.anom[names(temp.winter.anom) %in% 1854:2022],
+                                       winter.anomaly.two.yr.running.mean = temp.winter.anom.2yr[names(temp.winter.anom) %in% 1854:2022],
+                                       winter.anomaly.three.yr.running.mean = temp.winter.anom.3yr[names(temp.winter.anom) %in% 1854:2022]))
   
     
   }
