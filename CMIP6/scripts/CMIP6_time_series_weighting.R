@@ -5,13 +5,6 @@
 # step one - calculate distance from ERSST for each variable
 
 library(tidyverse)
-library(ncdf4)
-library(zoo)
-library(maps)
-library(mapdata)
-library(chron)
-library(fields)
-library(oce)
 
 # set palette
 new.col <- oceColorsPalette(64)
@@ -88,7 +81,7 @@ ggplot(temp, aes(year, value, color = name)) +
   geom_line() +
   facet_wrap(~model)
 
-# calculate model weighting differences ----------------
+# step one: calculate model differences from observations ----------------
 # create object to catch results
 output <- data.frame()
 
@@ -146,7 +139,7 @@ ggplot(plot, aes(value)) +
 # now save output
 write.csv(output, "./CMIP6/summaries/CMIP6_time_series_differences.csv", row.names = F)
 
-## calculate model similarities ----------------------------------------
+## step 2: calculate model similarities ----------------------------------------
 
 # calculate model weighting differences ----------------
 # create object to catch results
