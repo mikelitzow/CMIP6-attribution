@@ -146,3 +146,62 @@ ggplot(plot, aes(value)) +
 # now save output
 write.csv(output, "./CMIP6/summaries/CMIP6_time_series_differences.csv", row.names = F)
 
+## calculate model similarities ----------------------------------------
+
+# calculate model weighting differences ----------------
+# create object to catch results
+similarity <- data.frame()
+
+for(r in 1:length(regions)){
+  # r <- 2 
+  
+  for(m in 1:length(models)){
+    # m <- 1
+    
+    temp.cmip <- cmip %>%
+      filter(region == regions[r],
+             model == models[m]) 
+    
+    # calculate regional CMIP climatology, SD, AR(1), and trend
+    cmip.climatology <- mean(temp.cmip$annual.sst[temp.cmip$year %in% 1950:2014])
+    cmip.sd <- sd(temp.cmip$annual.sst[temp.cmip$year %in% 1950:2014])
+    cmip.ar <- ar(temp.cmip$annual.sst[temp.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
+    cmip.trend <- summary(lm(annual.sst ~ year, 
+                             data = temp.cmip[temp.cmip$year %in% 1973:2022,]))$coefficients[2,1]
+    
+    ## loop through every other model and compare
+    
+    # create a vector of models to compare with
+    compare.cmip <- models[-m]
+    
+    # and loop through 
+    for(c in 1:length(compare.cmip)){
+      # c <- 1
+      comp.cmip <- cmip %>%
+        filter(region == regions[r],
+               model == compare.cmip[c]) 
+      
+      # calculate regional CMIP climatology, SD, AR(1), and trend
+      comp.climatology <- mean(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
+      comp.sd <- sd(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
+      comp.ar <- ar(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
+      comp.trend <- summary(lm(annual.sst ~ year, 
+                               data = comp.cmip[comp.cmip$year %in% 1973:2022,]))$coefficients[2,1]
+    
+    
+    # add to output
+    similarity <- rbind(similarity,
+                    data.frame(region = regions[r],
+                               model = models[m],
+                               comparison = compare.cmip[c],
+                               climatology_diff = abs(comp.climatology - cmip.climatology),
+                               sd_diff = abs(comp.sd - cmip.sd),
+                               ar_diff = abs(comp.ar - cmip.ar),
+                               trend_diff = abs(comp.trend - cmip.trend)))
+    
+    } # close c loop (compare)
+  } # close m loop (models)
+} # close r loop (regions) 
+
+# now save output
+write.csv(similarity, "./CMIP6/summaries/CMIP6_time_series_model_similarities.csv", row.names = F)
