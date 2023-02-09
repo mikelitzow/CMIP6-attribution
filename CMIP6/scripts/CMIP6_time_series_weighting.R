@@ -144,5 +144,5 @@ ggplot(plot, aes(value)) +
   facet_grid(region~name, scales = "free")
 
 # now save output
-write.csv(output, "./CMIP6/summaries/CMIP6_time_series_weights.csv", row.names = F)
+write.csv(output, "./CMIP6/summaries/CMIP6_time_series_differences.csv", row.names = F)
 
