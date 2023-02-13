@@ -94,10 +94,13 @@ for(m in 1:length(models)){
 } # close r loop (regions) 
 
 ## loop through each model/region comparison and calculate prediction model for distance from "true" model
-## using fixed value of sigma_s at this point 
 
-# set sigma_s = 0.675 to tune sigma_d (following Zhao et al. 2022)
-sigma_s = 0.675
+# set a range of sigma_s, centered around 0.675, to tune sigma_d (following Zhao et al. 2022)
+sigma_s = seq(0.425, 0.925, by = 0.125)
+
+# define a range of possible sigma_d values between 0.2 and 1.1
+# (range used in Zhao et al. 2022 Earth's Future) 
+sigma_d <- seq(0.2, 1.1, by = 0.005)
 
 # vector of true models to predict
 true_models <- unique(perfect_model_prediction$true_model)
@@ -105,9 +108,13 @@ true_models <- unique(perfect_model_prediction$true_model)
 # create object to summarize D and S for each true model prediction
 predict_D_S <- data.frame()
 
-# # create object to catch results
-# tune_sigma_d <- data.frame()
+# create object to collect tuning results
+sigma_s_d_tuning <- data.frame()
 
+
+# start by looping through sigma_s
+for(sig.s in 1:length(sigm_s)){
+  # sig.s <- 1
 for(r in 1:length(regions)){
   # r <- 1
 
@@ -159,15 +166,17 @@ for(r in 1:length(regions)){
                                 data.frame(region = regions[r],
                                            true_model = true_models[t],
                                            prediction_model = temp_sim$model,
-                                           independence_skill = 1/(1+sum(exp(-(temp_sim$S^2/sigma_s^2)))))) %>%
+                                           sigma_s = sigma_s[sig.s],
+                                           independence_skill = 1/(1+sum(exp(-(temp_sim$S^2/sigma_s[sig.s]^2)))))) %>%
         group_by(region, true_model, prediction_model) %>%
-        summarise(independence_skill = mean(independence_skill))
+        summarise(sigma_s = sigma_s[sig.s],
+                  independence_skill = mean(independence_skill))
     
       # # check calculation above
       # check <- NA
       # 
       # for(i in 1:nrow(temp_sim)){
-      # check[i] <- exp(-(temp_sim$S[i]^2/sigma_s^2))
+      # check[i] <- exp(-(temp_sim$S[i]^2/sigma_s[sig.s]^2))
       # }
       # 
       # check_independence <- 1/(1+sum(check))
@@ -182,13 +191,11 @@ for(r in 1:length(regions)){
     
   } # close t loop (true models)
 }  # close r loop (regions)
+
+  
   
   
 # loop through each region and true model, calculate and save weighted prediction for each target quantity
-
-# define a range of possible sigma_d values between 0.2 and 1.1
-# (range used in Zhao et al. 2022 Earth's Future) 
-sigma_d <- seq(0.2, 1.1, by = 0.005)
 
 # create object for catching results
 regional_prediction <- data.frame()
@@ -208,7 +215,7 @@ for(r in 1:length(regions)){
     for(s in 1:length(sigma_d)){
       # s <- 1
       temp_dat <- temp_dat %>%
-        mutate(W = exp(-(D^2/sigma_d[s]))/independence_skill,
+        mutate(W = exp(-(D^2/sigma_d[s]))*independence_skill,
                norm_W = W/mean(W)) # normalize by the mean value of W
 
       # temp_plot <- temp_dat %>%
@@ -230,6 +237,7 @@ for(r in 1:length(regions)){
       regional_prediction <- rbind(regional_prediction,
                                    data.frame(region = regions[r],
                                               true_model = true_models[t],
+                                              sigma_s = sigma_s[sig.s],
                                               sigma_d = sigma_d[s],
                                               variable = c("mean_1850-1949", "mean_1950-2014", "mean_2015-2044", "sd_1950-2014", "ar_1950-2014"),
                                               true = c(mean(temp_dat$true.1850.1949), mean(temp_dat$true.1950.2014), mean(temp_dat$true.2015.2044),
@@ -258,7 +266,7 @@ regional_prediction$between[i] <- (between = if_else(between(regional_prediction
 # for each region, calculate the proportion of predictions in the 10th-90th prediction quantile for each value of sigma-d
 # and calculate true-prediction correlation
 
-sigma_d_tuning <- data.frame()
+
 
 variables <- unique(regional_prediction$variable)
 
@@ -277,13 +285,14 @@ variables <- unique(regional_prediction$variable)
     
     sigma_d_tuning <- rbind(sigma_d_tuning,
                             data.frame(variable = variables[v],
-                                       sigma = sigma_d[s],
+                                       sigma_s = sigma_s[sig.s],
+                                       sigma_d = sigma_d[s],
                                        proportion_between = sum(temp_dat$between)/
                                          length(temp_dat$between)))
     }
     }
   
-# }
+} # close sig.s loop (sigma_s values)
 
 ggplot(sigma_d_tuning, aes(sigma, proportion_between, color = variable)) +
   geom_line() +
