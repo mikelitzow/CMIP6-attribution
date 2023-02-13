@@ -25,7 +25,7 @@ models <- unique(cmip$model)
 regions <- unique(cmip$region)
 
 # loop through each model as "truth" and for each region predict
-# mean sst 1950:2014 and 2015:2044
+# climatology, trend, sd, and ar(1)
 # create object to catch results
 perfect_model_prediction  <- data.frame()
 
@@ -43,9 +43,7 @@ for(m in 1:length(models)){
     # calculate "true" mean sst for 1950:2014 and 2015:2044
     # these climatologies are critical to FAR calculations (former)
     # and sst projections under warming (latter)
-    true.1850.1949 <- mean(true.cmip$annual.sst[true.cmip$year %in% 1850:1949])
     true.1950.2014 <- mean(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
-    true.2015.2044 <- mean(true.cmip$annual.sst[true.cmip$year %in% 2015:2044])
     
     # and calculate sd, AR(1), and trend as in the actual weighting
     true.sd <- sd(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
@@ -60,9 +58,7 @@ for(m in 1:length(models)){
                model == compare.cmip[c]) 
       
       # calculate predicted values
-      pred.1850.1949 <- mean(comp.cmip$annual.sst[true.cmip$year %in% 1850:1949])
       pred.1950.2014 <- mean(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
-      pred.2015.2044 <- mean(comp.cmip$annual.sst[comp.cmip$year %in% 2015:2044])
       
       cmip.sd <- sd(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
       cmip.ar <- ar(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
@@ -78,16 +74,14 @@ for(m in 1:length(models)){
                                  sd_diff = abs(true.sd - cmip.sd),
                                  ar_diff = abs(true.ar - cmip.ar),
                                  trend_diff = abs(true.trend - cmip.trend),
+                                 true.climatology = true.1950.2014,
                                  true.sd = true.sd,
                                  true.ar = true.ar,
+                                 true.trend = true.trend,
+                                 cmip.climatology = pred.1950.2014,
                                  cmip.sd = cmip.sd,
                                  cmip.ar = cmip.ar,
-                                 true.1850.1949 = true.1850.1949,
-                                 true.1950.2014 = true.1950.2014,
-                                 true.2015.2044 = true.2015.2044,
-                                 pred.1850.1949 = pred.1850.1949,
-                                 pred.1950.2014 = pred.1950.2014,
-                                 pred.2015.2044 = pred.2015.2044))
+                                 cmip.trend = cmip.trend))
       
     } # close c loop (comparison models)
   } # close m loop (models)
