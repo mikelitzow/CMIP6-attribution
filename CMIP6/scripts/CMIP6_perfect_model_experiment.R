@@ -78,10 +78,10 @@ for(m in 1:length(models)){
                                  true.sd = true.sd,
                                  true.ar = true.ar,
                                  true.trend = true.trend,
-                                 cmip.climatology = pred.1950.2014,
-                                 cmip.sd = cmip.sd,
-                                 cmip.ar = cmip.ar,
-                                 cmip.trend = cmip.trend))
+                                 pred.climatology = pred.1950.2014,
+                                 pred.sd = cmip.sd,
+                                 pred.ar = cmip.ar,
+                                 pred.trend = cmip.trend))
       
     } # close c loop (comparison models)
   } # close m loop (models)
@@ -126,12 +126,13 @@ for(r in 1:length(regions)){
              diff3 = ar_diff / median(temp_predict$ar_diff),
              diff4 = trend_diff / median(temp_predict$trend_diff)) 
     
-    temp_predict$D = apply(temp_predict[,18:21], 1, mean)
+    temp_predict$D = apply(temp_predict[,16:19], 1, mean)
 
     # simplify 
     temp_predict <- temp_predict %>%
       select(true_model, region, prediction_model, D, 
-             true.1850.1949, true.1950.2014, true.2015.2044, pred.1850.1949, pred.1950.2014, pred.2015.2044, true.sd, true.ar, cmip.sd, cmip.ar)
+             true.climatology, true.sd, true.ar, true.trend, 
+             pred.climatology, pred.sd, pred.ar, pred.trend)
     
     # loop through each prediction model and calculate independence weight
     
@@ -206,10 +207,10 @@ for(r in 1:length(regions)){
              true_model == true_models[t])
     
     # loop through different values of sigma_D
-    for(s in 1:length(sigma_d)){
-      # s <- 1
+    for(sig.d in 1:length(sigma_d)){
+      # sig.d <- 1
       temp_dat <- temp_dat %>%
-        mutate(W = exp(-(D^2/sigma_d[s]))*independence_skill,
+        mutate(W = exp(-(D^2/sigma_d[sig.d]^2))*independence_skill,
                norm_W = W/mean(W)) # normalize by the mean value of W
 
       # temp_plot <- temp_dat %>%
@@ -219,27 +220,26 @@ for(r in 1:length(regions)){
       #   geom_point() +
       #   geom_path()
       
-      # calculate 10th and 90th quantile of weighted prediction
-      predict_1850.1949 <- whdquantile(x = temp_dat$pred.1850.1949, weights = temp_dat$norm_W, probs = c(0.1, 0.9))      
-      predict_1950.2014 <- whdquantile(x = temp_dat$pred.1950.2014, weights =  temp_dat$norm_W, probs = c(0.1, 0.9))
-      predict_2015.2044 <- whdquantile(x = temp_dat$pred.2015.2044, weights =  temp_dat$norm_W, probs = c(0.1, 0.9))
-      
-      predict_sd <- whdquantile(x = temp_dat$cmip.sd, weights =  temp_dat$norm_W, probs = c(0.1, 0.9))
-      predict_ar <- whdquantile(x = temp_dat$cmip.ar, weights =  temp_dat$norm_W, probs = c(0.1, 0.9))
+      # calculate 10th, 50th, 90th quantile of weighted prediction
+      predict_climatology <- whdquantile(x = temp_dat$pred.1950.2014, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
+      predict_trend <- whdquantile(x = temp_dat$pred.trend, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
+      predict_sd <- whdquantile(x = temp_dat$pred.sd, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
+      predict_ar <- whdquantile(x = temp_dat$pred.ar, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
       
       # save results
       regional_prediction <- rbind(regional_prediction,
                                    data.frame(region = regions[r],
                                               true_model = true_models[t],
                                               sigma_s = sigma_s[sig.s],
-                                              sigma_d = sigma_d[s],
-                                              variable = c("mean_1850-1949", "mean_1950-2014", "mean_2015-2044", "sd_1950-2014", "ar_1950-2014"),
-                                              true = c(mean(temp_dat$true.1850.1949), mean(temp_dat$true.1950.2014), mean(temp_dat$true.2015.2044),
+                                              sigma_d = sigma_d[sig.d],
+                                              variable = c("mean_2015-2044", "trend_1973-2022", "sd_1950-2014", "ar_1950-2014"),
+                                              true = c(mean(temp_dat$true.climatology), mean(temp_dat$true.trend),
                                                        mean(temp_dat$true.sd), mean(temp_dat$true.ar)),
-                                              predicted.10 = c(predict_1850.1949[1], predict_1950.2014[1], predict_2015.2044[1], predict_sd[1], predict_ar[1]),
-                                              predicted.90 = c(predict_1850.1949[2], predict_1950.2014[2], predict_2015.2044[2], predict_sd[2], predict_ar[2])))
+                                              predicted.10 = c(predict_climatology[1], predict_trend[1], predict_sd[1], predict_ar[1]),
+                                              predicted.mean = c(predict_climatology[2], predict_trend[2], predict_sd[2], predict_ar[2]),
+                                              predicted.90 = c(predict_climatology[3], predict_trend[3], predict_sd[3], predict_ar[3])))
       
-    } # close s loop (sigma_d)
+    } # close sig.d loop (sigma_d)
     
   } # close t loop (true models)
   
@@ -264,28 +264,30 @@ regional_prediction$between[i] <- (between = if_else(between(regional_prediction
 
 variables <- unique(regional_prediction$variable)
 
-# for(r in 1:length(regions)){
-  # r <- 1
+for(r in 1:length(regions)){
+r <- 1
   
   for(v in 1:length(variables)){
   #   # v <- 1
     
-    for(s in 1:length(sigma_d)){
-    # s <- 1
+    for(sig.d in 1:length(sigma_d)){
+    # sig.d <- 1
       
     temp_dat <- regional_prediction %>%
-      filter(variable == variables[v],
-             sigma_d == sigma_d[s])
+      filter(region == regions[r],
+              variable == variables[v],
+             sigma_d == sigma_d[sig.d])
     
     sigma_d_tuning <- rbind(sigma_d_tuning,
-                            data.frame(variable = variables[v],
+                            data.frame(region = regions[r],
+                                       variable = variables[v],
                                        sigma_s = sigma_s[sig.s],
-                                       sigma_d = sigma_d[s],
+                                       sigma_d = sigma_d[sig.d],
                                        proportion_between = sum(temp_dat$between)/
                                          length(temp_dat$between)))
     }
     }
-  
+}
 } # close sig.s loop (sigma_s values)
 
 ggplot(sigma_d_tuning, aes(sigma, proportion_between, color = variable)) +
