@@ -94,7 +94,7 @@ sigma_s = seq(0.425, 0.925, by = 0.125)
 
 # define a range of possible sigma_d values between 0.2 and 1.1
 # (range used in Zhao et al. 2022 Earth's Future) 
-sigma_d <- seq(0.2, 1.1, by = 0.005)
+sigma_d <- seq(0.05, 1.1, by = 0.005)
 
 # vector of true models to predict
 true_models <- unique(perfect_model_prediction$true_model)
@@ -107,7 +107,7 @@ sigma_s_d_tuning <- data.frame()
 
 
 # start by looping through sigma_s
-for(sig.s in 1:length(sigm_s)){
+for(sig.s in 1:length(sigma_s)){
   # sig.s <- 1
 for(r in 1:length(regions)){
   # r <- 1
@@ -221,7 +221,7 @@ for(r in 1:length(regions)){
       #   geom_path()
       
       # calculate 10th, 50th, 90th quantile of weighted prediction
-      predict_climatology <- whdquantile(x = temp_dat$pred.1950.2014, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
+      predict_climatology <- whdquantile(x = temp_dat$pred.climatology, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
       predict_trend <- whdquantile(x = temp_dat$pred.trend, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
       predict_sd <- whdquantile(x = temp_dat$pred.sd, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
       predict_ar <- whdquantile(x = temp_dat$pred.ar, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
@@ -232,7 +232,7 @@ for(r in 1:length(regions)){
                                               true_model = true_models[t],
                                               sigma_s = sigma_s[sig.s],
                                               sigma_d = sigma_d[sig.d],
-                                              variable = c("mean_2015-2044", "trend_1973-2022", "sd_1950-2014", "ar_1950-2014"),
+                                              variable = c("mean_1950-2014", "trend_1973-2022", "sd_1950-2014", "ar_1950-2014"),
                                               true = c(mean(temp_dat$true.climatology), mean(temp_dat$true.trend),
                                                        mean(temp_dat$true.sd), mean(temp_dat$true.ar)),
                                               predicted.10 = c(predict_climatology[1], predict_trend[1], predict_sd[1], predict_ar[1]),
@@ -278,11 +278,13 @@ r <- 1
               variable == variables[v],
              sigma_d == sigma_d[sig.d])
     
-    sigma_d_tuning <- rbind(sigma_d_tuning,
+    sigma_s_d_tuning <- rbind(sigma_s_d_tuning,
                             data.frame(region = regions[r],
                                        variable = variables[v],
                                        sigma_s = sigma_s[sig.s],
                                        sigma_d = sigma_d[sig.d],
+                                       true = temp_dat$true,
+                                       predicted = temp_dat$predicted.mean,
                                        proportion_between = sum(temp_dat$between)/
                                          length(temp_dat$between)))
     }
@@ -290,6 +292,10 @@ r <- 1
 }
 } # close sig.s loop (sigma_s values)
 
-ggplot(sigma_d_tuning, aes(sigma, proportion_between, color = variable)) +
+
+fix <- sigma_s_d_tuning$variable == "mean_2015-2044"
+
+
+ggplot(sigma_s_d_tuning, aes(sigma, proportion_between, color = variable)) +
   geom_line() +
   facet_wrap(~region)
