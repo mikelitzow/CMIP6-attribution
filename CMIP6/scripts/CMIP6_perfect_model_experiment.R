@@ -265,7 +265,7 @@ regional_prediction$between[i] <- (between = if_else(between(regional_prediction
 variables <- unique(regional_prediction$variable)
 
 for(r in 1:length(regions)){
-r <- 1
+# r <- 1
   
   for(v in 1:length(variables)){
   #   # v <- 1
@@ -294,8 +294,14 @@ r <- 1
 
 
 fix <- sigma_s_d_tuning$variable == "mean_2015-2044"
+sigma_s_d_tuning$variable[fix] <- "mean_1950-2044"
 
 
-ggplot(sigma_s_d_tuning, aes(sigma, proportion_between, color = variable)) +
+plot_dat <- sigma_s_d_tuning %>%
+  filter(sigma_s == 0.675) %>%
+  group_by(region, variable, sigma_d) %>%
+  summarise(proportion_between = mean(proportion_between))
+
+ggplot(plot_dat, aes(sigma_d, proportion_between, color = variable)) +
   geom_line() +
   facet_wrap(~region)
