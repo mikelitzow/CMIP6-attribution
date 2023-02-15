@@ -2,8 +2,6 @@
 
 library(tidyverse)
 
-
-
 # set theme
 theme_set(theme_bw())
 
@@ -89,12 +87,12 @@ for(m in 1:length(models)){
 
 ## loop through each model/region comparison and calculate prediction model for distance from "true" model
 
-# set a range of sigma_s, centered around 0.675, to tune sigma_d (following Zhao et al. 2022)
-sigma_s = seq(0.425, 0.925, by = 0.125)
+# set a range of sigma_s guided by Zhao et al. 2022)
+sigma_s = seq(0.2, 0.8, by = 0.1)
 
 # define a range of possible sigma_d values between 0.2 and 1.1
 # (range used in Zhao et al. 2022 Earth's Future) 
-sigma_d <- seq(0.05, 1.1, by = 0.005)
+sigma_d <- seq(0.2, 2, by = 0.005)
 
 # vector of true models to predict
 true_models <- unique(perfect_model_prediction$true_model)
@@ -104,7 +102,6 @@ predict_D_S <- data.frame()
 
 # create object to collect tuning results
 sigma_s_d_tuning <- data.frame()
-
 
 # start by looping through sigma_s
 for(sig.s in 1:length(sigma_s)){
@@ -144,11 +141,12 @@ for(r in 1:length(regions)){
     
     for(p in 1:length(pred_mods)){
       # p <- 1
-      
+     
+      # do not include similarity with the "true" model we are predicting! 
       temp_sim <- sims %>%
         filter(region == regions[r],
                model == pred_mods[p],
-               comparison != temp_predict$true_model) %>% # do not include similarity with the "true" model we are predicting!
+               comparison != temp_predict$true_model) %>% 
         mutate(sim1 = climatology_diff / median(temp_sim$climatology_diff),
               sim2 = sd_diff / median(temp_sim$sd_diff),
               sim3 = ar_diff / median(temp_sim$ar_diff),
@@ -164,7 +162,7 @@ for(r in 1:length(regions)){
                                            sigma_s = sigma_s[sig.s],
                                            independence_skill = 1/(1+sum(exp(-(temp_sim$S^2/sigma_s[sig.s]^2)))))) %>%
         group_by(region, true_model, prediction_model) %>%
-        summarise(sigma_s = sigma_s[sig.s],
+        summarise(sigma_s = mean(sigma_s),
                   independence_skill = mean(independence_skill))
     
       # # check calculation above
@@ -255,7 +253,7 @@ regional_prediction$between[i] <- (between = if_else(between(regional_prediction
                                                           regional_prediction$predicted.10[i], 
                                                           regional_prediction$predicted.90[i]), 1, 0))
 
-}
+} # 
 
 # for each region, calculate the proportion of predictions in the 10th-90th prediction quantile for each value of sigma-d
 # and calculate true-prediction correlation
@@ -287,21 +285,52 @@ for(r in 1:length(regions)){
                                        predicted = temp_dat$predicted.mean,
                                        proportion_between = sum(temp_dat$between)/
                                          length(temp_dat$between)))
-    }
-    }
-}
+    } # close sig.d loop
+    } # close variable loop
+} # close region loop
 } # close sig.s loop (sigma_s values)
+# check <- read.csv("./CMIP6/summaries/tuning_results_sigma_perfect_model.csv")
+
+# save results
+write.csv(sigma_s_d_tuning, "./CMIP6/summaries/tuning_results_sigma_perfect_model.csv", row.names = F)
+
+# summarize
+perfect_model_out <- sigma_s_d_tuning %>%
+  group_by(region, sigma_s, sigma_d) %>%
+  summarize(proportion_between = mean(proportion_between))
+
+# this is the correlation between "true" and weighted 
+# prediction for each "true" model
+
+# this is the proportion of "true" values
+# within 10th-90th quantiles of weighted 
+# prediction across all 23 "true" models - 
+# averaged b/c it is the same value in dataframe across
+# all 23 "true" models
 
 
-fix <- sigma_s_d_tuning$variable == "mean_2015-2044"
-sigma_s_d_tuning$variable[fix] <- "mean_1950-2044"
+plot_dat <- perfect_model_out %>%
+  filter(sigma_s == 0.2)
 
-
-plot_dat <- sigma_s_d_tuning %>%
-  filter(sigma_s == 0.675) %>%
-  group_by(region, variable, sigma_d) %>%
-  summarise(proportion_between = mean(proportion_between))
-
-ggplot(plot_dat, aes(sigma_d, proportion_between, color = variable)) +
+sig1 <-  ggplot(plot_dat, aes(sigma_d, proportion_between)) +
   geom_line() +
-  facet_wrap(~region)
+  facet_wrap(~region) +
+  geom_hline(yintercept = 0.8, lty = 2) 
+
+##
+plot_dat <- perfect_model_out %>%
+  filter(sigma_s == 0.4)
+
+sig2 <-  ggplot(plot_dat, aes(sigma_d, proportion_between)) +
+  geom_line() +
+  facet_wrap(~region) +
+  geom_hline(yintercept = 0.8, lty = 2) 
+
+##
+plot_dat <- perfect_model_out %>%
+  filter(sigma_s == 0.5)
+
+sig3 <-  ggplot(plot_dat, aes(sigma_d, proportion_between)) +
+  geom_line() +
+  facet_wrap(~region) +
+  geom_hline(yintercept = 0.8, lty = 2) 
