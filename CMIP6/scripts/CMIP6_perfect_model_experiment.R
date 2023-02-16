@@ -297,7 +297,22 @@ write.csv(sigma_s_d_tuning, "./CMIP6/summaries/tuning_results_sigma_perfect_mode
 # summarize
 perfect_model_out <- sigma_s_d_tuning %>%
   group_by(region, sigma_s, sigma_d) %>%
-  summarize(proportion_between = mean(proportion_between))
+  summarise(proportion_between = mean(proportion_between))
+
+
+perfect_model_out2 <- sigma_s_d_tuning %>%
+  group_by(region) %>%
+  group_by(sigma_s) %>%
+  group_by(sigma_d)
+
+identical(perfect_model_out, perfect_model_out2)
+str(perfect_model_out2)
+
+  summarise(proportion_between = mean(proportion_between))
+
+
+# check
+sum(is.na(perfect_model_out$sigma_d))
 
 # this is the correlation between "true" and weighted 
 # prediction for each "true" model
@@ -309,28 +324,52 @@ perfect_model_out <- sigma_s_d_tuning %>%
 # all 23 "true" models
 
 
-plot_dat <- perfect_model_out %>%
-  filter(sigma_s == 0.2)
-
-sig1 <-  ggplot(plot_dat, aes(sigma_d, proportion_between)) +
+ggplot(perfect_model_out, aes(sigma_d, proportion_between, color = as.factor(sigma_s))) +
   geom_line() +
   facet_wrap(~region) +
-  geom_hline(yintercept = 0.8, lty = 2) 
+  geom_hline(yintercept = 0.8, lty = 2)
 
-##
-plot_dat <- perfect_model_out %>%
-  filter(sigma_s == 0.4)
+ggsave("./CMIP6/figs/combined_sigma_d_sigma_s_one_panel_per_region.png", width = 10, height = 6, units = 'in')
 
-sig2 <-  ggplot(plot_dat, aes(sigma_d, proportion_between)) +
+# look at effect of sigma-s on independence skill
+
+look <- data.frame(sigma_s = seq(0.2, 0.8, by = 0.1),
+                   S = 0.5) 
+look$independence_skill = 1/(1+exp(-(look$S^2/look$sigma_s^2)))
+look
+# as sigma-s increases, penalty for non-independence increases
+
+## get correlations
+perfect_model_cor <- sigma_s_d_tuning %>%
+  dplyr::filter(sigma_s == 0.2) %>%
+  dplyr::group_by(region, variable, sigma_d) %>%
+  dplyr::summarize(correlation = cor(true, predicted))
+
+ggplot(perfect_model_cor, aes(sigma_d, correlation, color = variable)) +
   geom_line() +
-  facet_wrap(~region) +
-  geom_hline(yintercept = 0.8, lty = 2) 
+  facet_wrap(~region)
 
-##
-plot_dat <- perfect_model_out %>%
-  filter(sigma_s == 0.5)
+# and true vs predicted plot
+# calculate sigma-d for each system
+select_sigma_d <- perfect_model_out %>%
+  filter(sigma_s == 0.3) %>%
+  group_by(region) %>%
+  summarise(max_prop = max(proportion_between))
+  
+%>%
+  filter(diff >= 0) %>%
+  group_by(region) %>%
+  summarise(sigma_d = min(sigma_d)) %>%
+  mutate(sigma_s = 0.3)
+  
+check <- sigma_s_d_tuning %>%
+  group_by(region, sigma_s) %>%
+  summarise(count = sum(!is.na(proportion_between)))
+View(check)
 
-sig3 <-  ggplot(plot_dat, aes(sigma_d, proportion_between)) +
-  geom_line() +
-  facet_wrap(~region) +
-  geom_hline(yintercept = 0.8, lty = 2) 
+
+plot_dat <- left_join(select_sigma_d, sigma_s_d_tuning)  
+
+ggplot(plot_dat, aes(predicted, true)) +
+  geom_point() +
+  facet_wrap(region~variable,scales = "free", ncol = 4)
