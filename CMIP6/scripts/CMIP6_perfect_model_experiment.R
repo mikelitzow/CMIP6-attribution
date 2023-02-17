@@ -13,77 +13,77 @@ cmip <- read.csv("./CMIP6/summaries/CMIP6.sst.time.series.csv") %>%
 
 # load model similarities for weighting
 sims <- read.csv("./CMIP6/summaries/CMIP6_time_series_model_similarities.csv") 
-
-## model evaluation -------------------------------------------------
-
-# get vector of models to roll through
-models <- unique(cmip$model)
-
-# get regions to roll through
-regions <- unique(cmip$region)
-
-# loop through each model as "truth" and for each region predict
-# climatology, trend, sd, and ar(1)
-# create object to catch results
-perfect_model_prediction  <- data.frame()
-
-for(m in 1:length(models)){
-  # m <- 2 
-  # create vector of models to compare with
-  compare.cmip <- models[-m]
-  
-  for(r in 1:length(regions)){
-    # r <- 1
-    true.cmip <- cmip %>%
-      filter(region == regions[r],
-             model == models[m]) 
-  
-    # calculate "true" mean sst for 1950:2014 and 2015:2044
-    # these climatologies are critical to FAR calculations (former)
-    # and sst projections under warming (latter)
-    true.1950.2014 <- mean(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
-    
-    # and calculate sd, AR(1), and trend as in the actual weighting
-    true.sd <- sd(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
-    true.ar <- ar(true.cmip$annual.sst[true.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar   
-    true.trend <- summary(lm(annual.sst ~ year, 
-                             data = true.cmip[true.cmip$year %in% 1973:2022,]))$coefficients[2,1]
-    
-    for(c in 1: length(compare.cmip)){
-      # c <- 1
-      comp.cmip <- cmip %>%
-        filter(region == regions[r],
-               model == compare.cmip[c]) 
-      
-      # calculate predicted values
-      pred.1950.2014 <- mean(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
-      
-      cmip.sd <- sd(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
-      cmip.ar <- ar(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
-      cmip.trend <- summary(lm(annual.sst ~ year, 
-                               data = comp.cmip[comp.cmip$year %in% 1973:2022,]))$coefficients[2,1]
-
-      # add to output
-      perfect_model_prediction <- rbind(perfect_model_prediction,
-                      data.frame(true_model = models[m],
-                                 region = regions[r],
-                                 prediction_model = compare.cmip[c],
-                                 climatology_diff = abs(true.1950.2014 - pred.1950.2014),
-                                 sd_diff = abs(true.sd - cmip.sd),
-                                 ar_diff = abs(true.ar - cmip.ar),
-                                 trend_diff = abs(true.trend - cmip.trend),
-                                 true.climatology = true.1950.2014,
-                                 true.sd = true.sd,
-                                 true.ar = true.ar,
-                                 true.trend = true.trend,
-                                 pred.climatology = pred.1950.2014,
-                                 pred.sd = cmip.sd,
-                                 pred.ar = cmip.ar,
-                                 pred.trend = cmip.trend))
-      
-    } # close c loop (comparison models)
-  } # close m loop (models)
-} # close r loop (regions) 
+# 
+# ## model evaluation -------------------------------------------------
+# 
+# # get vector of models to roll through
+# models <- unique(cmip$model)
+# 
+# # get regions to roll through
+# regions <- unique(cmip$region)
+# 
+# # loop through each model as "truth" and for each region predict
+# # climatology, trend, sd, and ar(1)
+# # create object to catch results
+# perfect_model_prediction  <- data.frame()
+# 
+# for(m in 1:length(models)){
+#   # m <- 2 
+#   # create vector of models to compare with
+#   compare.cmip <- models[-m]
+#   
+#   for(r in 1:length(regions)){
+#     # r <- 1
+#     true.cmip <- cmip %>%
+#       filter(region == regions[r],
+#              model == models[m]) 
+#   
+#     # calculate "true" mean sst for 1950:2014 and 2015:2044
+#     # these climatologies are critical to FAR calculations (former)
+#     # and sst projections under warming (latter)
+#     true.1950.2014 <- mean(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
+#     
+#     # and calculate sd, AR(1), and trend as in the actual weighting
+#     true.sd <- sd(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
+#     true.ar <- ar(true.cmip$annual.sst[true.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar   
+#     true.trend <- summary(lm(annual.sst ~ year, 
+#                              data = true.cmip[true.cmip$year %in% 1973:2022,]))$coefficients[2,1]
+#     
+#     for(c in 1: length(compare.cmip)){
+#       # c <- 1
+#       comp.cmip <- cmip %>%
+#         filter(region == regions[r],
+#                model == compare.cmip[c]) 
+#       
+#       # calculate predicted values
+#       pred.1950.2014 <- mean(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
+#       
+#       cmip.sd <- sd(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
+#       cmip.ar <- ar(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
+#       cmip.trend <- summary(lm(annual.sst ~ year, 
+#                                data = comp.cmip[comp.cmip$year %in% 1973:2022,]))$coefficients[2,1]
+# 
+#       # add to output
+#       perfect_model_prediction <- rbind(perfect_model_prediction,
+#                       data.frame(true_model = models[m],
+#                                  region = regions[r],
+#                                  prediction_model = compare.cmip[c],
+#                                  climatology_diff = abs(true.1950.2014 - pred.1950.2014),
+#                                  sd_diff = abs(true.sd - cmip.sd),
+#                                  ar_diff = abs(true.ar - cmip.ar),
+#                                  trend_diff = abs(true.trend - cmip.trend),
+#                                  true.climatology = true.1950.2014,
+#                                  true.sd = true.sd,
+#                                  true.ar = true.ar,
+#                                  true.trend = true.trend,
+#                                  pred.climatology = pred.1950.2014,
+#                                  pred.sd = cmip.sd,
+#                                  pred.ar = cmip.ar,
+#                                  pred.trend = cmip.trend))
+#       
+#     } # close c loop (comparison models)
+#   } # close m loop (models)
+# } # close r loop (regions) 
 
 ## loop through each model/region comparison and calculate prediction model for distance from "true" model
 
@@ -118,10 +118,10 @@ for(r in 1:length(regions)){
       
     # scale each difference by the median, and average to get D
     temp_predict <- temp_predict %>%
-      mutate(diff1 = climatology_diff / median(temp_predict$climatology_diff),
+      mutate(diff1 = 2*climatology_diff / median(temp_predict$climatology_diff),
              diff2 = sd_diff / median(temp_predict$sd_diff),
              diff3 = ar_diff / median(temp_predict$ar_diff),
-             diff4 = trend_diff / median(temp_predict$trend_diff)) 
+             diff4 = 2*trend_diff / median(temp_predict$trend_diff)) 
     
     temp_predict$D = apply(temp_predict[,16:19], 1, mean)
 
@@ -147,10 +147,10 @@ for(r in 1:length(regions)){
         filter(region == regions[r],
                model == pred_mods[p],
                comparison != temp_predict$true_model) %>% 
-        mutate(sim1 = climatology_diff / median(temp_sim$climatology_diff),
+        mutate(sim1 = 2*climatology_diff / median(temp_sim$climatology_diff),
               sim2 = sd_diff / median(temp_sim$sd_diff),
               sim3 = ar_diff / median(temp_sim$ar_diff),
-              sim4 = trend_diff / median(temp_sim$trend_diff))
+              sim4 = 2*trend_diff / median(temp_sim$trend_diff))
     
       temp_sim$S = apply(temp_sim[,8:11], 1, mean)
       
@@ -294,28 +294,16 @@ for(r in 1:length(regions)){
 # save results
 write.csv(sigma_s_d_tuning, "./CMIP6/summaries/tuning_results_sigma_perfect_model.csv", row.names = F)
 
+## process results-------------------
+
+sigma_s_d_tuning <- read.csv("./CMIP6/summaries/tuning_results_sigma_perfect_model.csv")
+
+
 # summarize
 perfect_model_out <- sigma_s_d_tuning %>%
   group_by(region, sigma_s, sigma_d) %>%
-  summarise(proportion_between = mean(proportion_between))
-
-
-perfect_model_out2 <- sigma_s_d_tuning %>%
-  group_by(region) %>%
-  group_by(sigma_s) %>%
-  group_by(sigma_d)
-
-identical(perfect_model_out, perfect_model_out2)
-str(perfect_model_out2)
-
-  summarise(proportion_between = mean(proportion_between))
-
-
-# check
-sum(is.na(perfect_model_out$sigma_d))
-
-# this is the correlation between "true" and weighted 
-# prediction for each "true" model
+  summarise(mean_proportion_between = mean(proportion_between)) %>%
+  ungroup()
 
 # this is the proportion of "true" values
 # within 10th-90th quantiles of weighted 
@@ -323,11 +311,40 @@ sum(is.na(perfect_model_out$sigma_d))
 # averaged b/c it is the same value in dataframe across
 # all 23 "true" models
 
+# check
+sum(is.na(perfect_model_out$sigma_d))
 
-ggplot(perfect_model_out, aes(sigma_d, proportion_between, color = as.factor(sigma_s))) +
+# this is the correlation between "true" and weighted 
+# prediction for each "true" model
+
+# clean up to plot
+perfect_model_plot <- perfect_model_out %>%
+  mutate(sigma_s = as.factor(sigma_s))
+
+# clean up and order region names
+clean_names <- data.frame(region = unique(perfect_model_plot$region),
+                   plot_region = as.factor(c("British Columbia Coast",
+                                   "Eastern Bering Sea",
+                                   "Gulf of Alaska",
+                                   "North Pacific",
+                                   "Northern California Current",
+                                   "Southern California Current")),
+                   plot_order = c(4,2,3,1,5,6))
+
+perfect_model_plot <- left_join(perfect_model_plot, clean_names) %>%
+  mutate(plot_region = reorder(plot_region, plot_order))
+
+# custom colorblind colors
+cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(perfect_model_plot, aes(sigma_d, mean_proportion_between, color = as.factor(sigma_s))) +
   geom_line() +
-  facet_wrap(~region) +
-  geom_hline(yintercept = 0.8, lty = 2)
+  facet_wrap(~plot_region) +
+  geom_hline(yintercept = 0.8, lty = 2) +
+  guides(color = guide_legend(title = expression(sigma["s"]))) +
+  scale_color_manual(values = cb[c(1:4, 6:8)]) +
+  xlab(expression(sigma["d"])) +
+  ylab(expression("Proportion between 10"^"th"~"and 90"^"th"~"quantiles"))
 
 ggsave("./CMIP6/figs/combined_sigma_d_sigma_s_one_panel_per_region.png", width = 10, height = 6, units = 'in')
 
@@ -341,35 +358,62 @@ look
 
 ## get correlations
 perfect_model_cor <- sigma_s_d_tuning %>%
-  dplyr::filter(sigma_s == 0.2) %>%
-  dplyr::group_by(region, variable, sigma_d) %>%
-  dplyr::summarize(correlation = cor(true, predicted))
+  filter(sigma_s == 0.4) %>%
+  group_by(region, variable, sigma_d) %>%
+  summarize(correlation = cor(true, predicted)) %>%
+  ungroup()
 
 ggplot(perfect_model_cor, aes(sigma_d, correlation, color = variable)) +
   geom_line() +
   facet_wrap(~region)
 
-# and true vs predicted plot
+
 # calculate sigma-d for each system
-select_sigma_d <- perfect_model_out %>%
-  filter(sigma_s == 0.3) %>%
+max_proportion <- perfect_model_out %>%
+  filter(sigma_s == 0.4) %>%
   group_by(region) %>%
-  summarise(max_prop = max(proportion_between))
-  
-%>%
+  summarise(max_prop = max(mean_proportion_between)) # all regions reach 0.8 except SCC
+
+# query ssc separately
+scc_sigma <- perfect_model_out %>%
+  filter(region == "Southern_California_Current",
+         sigma_s == 0.4,
+         mean_proportion_between == max_proportion$max_prop[max_proportion$region == "Southern_California_Current"]) 
+
+# now select sigma-d for other regions 
+select_sigma <- perfect_model_out %>%
+  filter(sigma_s == 0.4) %>%
+  mutate(diff = mean_proportion_between - 0.8) %>%
   filter(diff >= 0) %>%
   group_by(region) %>%
   summarise(sigma_d = min(sigma_d)) %>%
-  mutate(sigma_s = 0.3)
-  
-check <- sigma_s_d_tuning %>%
-  group_by(region, sigma_s) %>%
-  summarise(count = sum(!is.na(proportion_between)))
-View(check)
 
+select_sigma  <-  rbind(select_sigma, data.frame(region = "Southern_California_Current",
+                                                sigma_d = min(scc_sigma$sigma_d)))
+select_sigma <- select_sigma %>%
+  mutate(sigma_s = 0.4)
 
-plot_dat <- left_join(select_sigma_d, sigma_s_d_tuning)  
+# save
+write.csv(select_sigma, "./CMIP6/summaries/model_weighting_sigma.csv", row.names = F)
 
-ggplot(plot_dat, aes(predicted, true)) +
+plot_dat <- left_join(select_sigma, sigma_s_d_tuning)  
+
+plot_dat <- left_join(plot_dat, clean_names) %>%
+  mutate(plot_region = reorder(plot_region, plot_order))
+
+# and scale to plot!
+plot_scale <- plot_dat %>%
+  group_by(region, variable) %>% 
+  summarise(mean = mean(true),
+            sd = sd(true))
+
+plot_dat <- left_join(plot_dat, plot_scale)
+
+# now scale
+plot_dat <- plot_dat %>%
+  mutate(sc_true = (true-mean)/sd,
+         sc_predicted = (predicted-mean)/sd)
+
+ggplot(plot_dat, aes(sc_predicted, sc_true)) +
   geom_point() +
-  facet_wrap(region~variable,scales = "free", ncol = 4)
+  facet_grid(region~variable, scales = "free")
