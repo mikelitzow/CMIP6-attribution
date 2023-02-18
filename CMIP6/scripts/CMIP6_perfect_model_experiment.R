@@ -13,54 +13,54 @@ cmip <- read.csv("./CMIP6/summaries/CMIP6.sst.time.series.csv") %>%
 
 # load model similarities for weighting
 sims <- read.csv("./CMIP6/summaries/CMIP6_time_series_model_similarities.csv") 
-# 
-# ## model evaluation -------------------------------------------------
-# 
-# # get vector of models to roll through
-# models <- unique(cmip$model)
-# 
-# # get regions to roll through
-# regions <- unique(cmip$region)
-# 
-# # loop through each model as "truth" and for each region predict
-# # climatology, trend, sd, and ar(1)
-# # create object to catch results
+
+## model evaluation -------------------------------------------------
+
+# get vector of models to roll through
+models <- unique(cmip$model)
+
+# get regions to roll through
+regions <- unique(cmip$region)
+
+# loop through each model as "truth" and for each region predict
+# climatology, trend, sd, and ar(1)
+# create object to catch results
 # perfect_model_prediction  <- data.frame()
 # 
 # for(m in 1:length(models)){
-#   # m <- 2 
+#   # m <- 2
 #   # create vector of models to compare with
 #   compare.cmip <- models[-m]
-#   
+# 
 #   for(r in 1:length(regions)){
 #     # r <- 1
 #     true.cmip <- cmip %>%
 #       filter(region == regions[r],
-#              model == models[m]) 
-#   
+#              model == models[m])
+# 
 #     # calculate "true" mean sst for 1950:2014 and 2015:2044
 #     # these climatologies are critical to FAR calculations (former)
 #     # and sst projections under warming (latter)
 #     true.1950.2014 <- mean(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
-#     
+# 
 #     # and calculate sd, AR(1), and trend as in the actual weighting
 #     true.sd <- sd(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
-#     true.ar <- ar(true.cmip$annual.sst[true.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar   
-#     true.trend <- summary(lm(annual.sst ~ year, 
+#     true.ar <- ar(true.cmip$annual.sst[true.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
+#     true.trend <- summary(lm(annual.sst ~ year,
 #                              data = true.cmip[true.cmip$year %in% 1973:2022,]))$coefficients[2,1]
-#     
+# 
 #     for(c in 1: length(compare.cmip)){
 #       # c <- 1
 #       comp.cmip <- cmip %>%
 #         filter(region == regions[r],
-#                model == compare.cmip[c]) 
-#       
+#                model == compare.cmip[c])
+# 
 #       # calculate predicted values
 #       pred.1950.2014 <- mean(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
-#       
+# 
 #       cmip.sd <- sd(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
 #       cmip.ar <- ar(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
-#       cmip.trend <- summary(lm(annual.sst ~ year, 
+#       cmip.trend <- summary(lm(annual.sst ~ year,
 #                                data = comp.cmip[comp.cmip$year %in% 1973:2022,]))$coefficients[2,1]
 # 
 #       # add to output
@@ -80,10 +80,10 @@ sims <- read.csv("./CMIP6/summaries/CMIP6_time_series_model_similarities.csv")
 #                                  pred.sd = cmip.sd,
 #                                  pred.ar = cmip.ar,
 #                                  pred.trend = cmip.trend))
-#       
+# 
 #     } # close c loop (comparison models)
 #   } # close m loop (models)
-# } # close r loop (regions) 
+# } # close r loop (regions)
 
 ## loop through each model/region comparison and calculate prediction model for distance from "true" model
 
@@ -92,7 +92,7 @@ sigma_s = seq(0.2, 0.8, by = 0.1)
 
 # define a range of possible sigma_d values between 0.2 and 1.1
 # (range used in Zhao et al. 2022 Earth's Future) 
-sigma_d <- seq(0.2, 2, by = 0.005)
+sigma_d <- seq(0.2, 2.5, by = 0.005)
 
 # vector of true models to predict
 true_models <- unique(perfect_model_prediction$true_model)
@@ -146,7 +146,9 @@ for(r in 1:length(regions)){
       temp_sim <- sims %>%
         filter(region == regions[r],
                model == pred_mods[p],
-               comparison != temp_predict$true_model) %>% 
+               comparison != temp_predict$true_model)
+        
+      temp_sim <- temp_sim %>%
         mutate(sim1 = 2*climatology_diff / median(temp_sim$climatology_diff),
               sim2 = sd_diff / median(temp_sim$sd_diff),
               sim3 = ar_diff / median(temp_sim$ar_diff),
@@ -225,17 +227,23 @@ for(r in 1:length(regions)){
       predict_ar <- whdquantile(x = temp_dat$pred.ar, weights =  temp_dat$norm_W, probs = c(0.1, 0.5, 0.9))
       
       # save results
+      # note that we're counting climatology and trend twice to reflect double weighting
       regional_prediction <- rbind(regional_prediction,
                                    data.frame(region = regions[r],
                                               true_model = true_models[t],
                                               sigma_s = sigma_s[sig.s],
                                               sigma_d = sigma_d[sig.d],
-                                              variable = c("mean_1950-2014", "trend_1973-2022", "sd_1950-2014", "ar_1950-2014"),
-                                              true = c(mean(temp_dat$true.climatology), mean(temp_dat$true.trend),
+                                              variable = c("mean_1950-2014_1", "mean_1950-2014_2", "trend_1973-2022_1", "trend_1973-2022_2", 
+                                                           "sd_1950-2014", "ar_1950-2014"),
+                                              true = c(mean(temp_dat$true.climatology), mean(temp_dat$true.climatology),
+                                                       mean(temp_dat$true.trend), mean(temp_dat$true.trend),
                                                        mean(temp_dat$true.sd), mean(temp_dat$true.ar)),
-                                              predicted.10 = c(predict_climatology[1], predict_trend[1], predict_sd[1], predict_ar[1]),
-                                              predicted.mean = c(predict_climatology[2], predict_trend[2], predict_sd[2], predict_ar[2]),
-                                              predicted.90 = c(predict_climatology[3], predict_trend[3], predict_sd[3], predict_ar[3])))
+                                              predicted.10 = c(predict_climatology[1], predict_climatology[1], 
+                                                               predict_trend[1], predict_trend[1], predict_sd[1], predict_ar[1]),
+                                              predicted.mean = c(predict_climatology[2], predict_climatology[2], 
+                                                                 predict_trend[2], predict_trend[2],predict_sd[2], predict_ar[2]),
+                                              predicted.90 = c(predict_climatology[3], predict_climatology[3],
+                                                               predict_trend[3], predict_trend[3], predict_sd[3], predict_ar[3])))
       
     } # close sig.d loop (sigma_d)
     
