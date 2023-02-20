@@ -48,7 +48,7 @@ region.names <- read.csv("./CMIP6/summaries/clean_region_names.csv")
 CMIP6.sst.time.series <- CMIP6.anomaly.time.series <- data.frame()
 
 for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
-
+ i <- 1
   path <- paste("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/", files.new[i], sep="")
   
   # load file
@@ -60,7 +60,7 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   experiments <-  ncvar_get(nc, "experiment", verbose = F)
   
   for(j in 1:length(experiments)){ # start j loop (each experiment)
-
+  j <- 1
   # extract dates
 
   d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
