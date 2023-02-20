@@ -25,6 +25,67 @@ regions <- unique(cmip$region)
 # loop through each model as "truth" and for each region predict
 # climatology, trend, sd, and ar(1)
 # create object to catch results
+<<<<<<< HEAD
+perfect_model_prediction  <- data.frame()
+
+for(m in 1:length(models)){
+  # m <- 2
+  # create vector of models to compare with
+  compare.cmip <- models[-m]
+
+  for(r in 1:length(regions)){
+    # r <- 1
+    true.cmip <- cmip %>%
+      filter(region == regions[r],
+             model == models[m])
+
+    # calculate "true" mean sst for 1950:2014 and 2015:2044
+    # these climatologies are critical to FAR calculations (former)
+    # and sst projections under warming (latter)
+    true.1950.2014 <- mean(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
+
+    # and calculate sd, AR(1), and trend as in the actual weighting
+    true.sd <- sd(true.cmip$annual.sst[true.cmip$year %in% 1950:2014])
+    true.ar <- ar(true.cmip$annual.sst[true.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
+    true.trend <- summary(lm(annual.sst ~ year,
+                             data = true.cmip[true.cmip$year %in% 1973:2022,]))$coefficients[2,1]
+
+    for(c in 1: length(compare.cmip)){
+      # c <- 1
+      comp.cmip <- cmip %>%
+        filter(region == regions[r],
+               model == compare.cmip[c])
+
+      # calculate predicted values
+      pred.1950.2014 <- mean(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
+
+      cmip.sd <- sd(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014])
+      cmip.ar <- ar(comp.cmip$annual.sst[comp.cmip$year %in% 1950:2014], order.max = 1, aic = F)$ar
+      cmip.trend <- summary(lm(annual.sst ~ year,
+                               data = comp.cmip[comp.cmip$year %in% 1973:2022,]))$coefficients[2,1]
+
+      # add to output
+      perfect_model_prediction <- rbind(perfect_model_prediction,
+                      data.frame(true_model = models[m],
+                                 region = regions[r],
+                                 prediction_model = compare.cmip[c],
+                                 climatology_diff = abs(true.1950.2014 - pred.1950.2014),
+                                 sd_diff = abs(true.sd - cmip.sd),
+                                 ar_diff = abs(true.ar - cmip.ar),
+                                 trend_diff = abs(true.trend - cmip.trend),
+                                 true.climatology = true.1950.2014,
+                                 true.sd = true.sd,
+                                 true.ar = true.ar,
+                                 true.trend = true.trend,
+                                 pred.climatology = pred.1950.2014,
+                                 pred.sd = cmip.sd,
+                                 pred.ar = cmip.ar,
+                                 pred.trend = cmip.trend))
+
+    } # close c loop (comparison models)
+  } # close m loop (models)
+} # close r loop (regions)
+=======
 # perfect_model_prediction  <- data.frame()
 # 
 # for(m in 1:length(models)){
@@ -84,6 +145,7 @@ regions <- unique(cmip$region)
 #     } # close c loop (comparison models)
 #   } # close m loop (models)
 # } # close r loop (regions)
+>>>>>>> 573659ba5ce8237a33591d89541df5c4d183f1e9
 
 ## loop through each model/region comparison and calculate prediction model for distance from "true" model
 
@@ -118,10 +180,10 @@ for(r in 1:length(regions)){
       
     # scale each difference by the median, and average to get D
     temp_predict <- temp_predict %>%
-      mutate(diff1 = 2*climatology_diff / median(temp_predict$climatology_diff),
+      mutate(diff1 = climatology_diff / median(temp_predict$climatology_diff),
              diff2 = sd_diff / median(temp_predict$sd_diff),
              diff3 = ar_diff / median(temp_predict$ar_diff),
-             diff4 = 2*trend_diff / median(temp_predict$trend_diff)) 
+             diff4 = trend_diff / median(temp_predict$trend_diff)) 
     
     temp_predict$D = apply(temp_predict[,16:19], 1, mean)
 
@@ -146,13 +208,18 @@ for(r in 1:length(regions)){
       temp_sim <- sims %>%
         filter(region == regions[r],
                model == pred_mods[p],
+<<<<<<< HEAD
+               comparison != temp_predict$true_model) %>% 
+        mutate(sim1 = climatology_diff / median(temp_sim$climatology_diff),
+=======
                comparison != temp_predict$true_model)
         
       temp_sim <- temp_sim %>%
         mutate(sim1 = 2*climatology_diff / median(temp_sim$climatology_diff),
+>>>>>>> 573659ba5ce8237a33591d89541df5c4d183f1e9
               sim2 = sd_diff / median(temp_sim$sd_diff),
               sim3 = ar_diff / median(temp_sim$ar_diff),
-              sim4 = 2*trend_diff / median(temp_sim$trend_diff))
+              sim4 = trend_diff / median(temp_sim$trend_diff))
     
       temp_sim$S = apply(temp_sim[,8:11], 1, mean)
       
