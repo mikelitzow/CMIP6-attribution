@@ -300,7 +300,7 @@ for(r in 1:length(regions)){
 # check <- read.csv("./CMIP6/summaries/tuning_results_sigma_perfect_model.csv")
 
 # save results
-write.csv(sigma_s_d_tuning, "./CMIP6/summaries/tuning_results_sigma_perfect_model.csv", row.names = F)
+write.csv(sigma_s_d_tuning, "./CMIP6/summaries/tuning_results_sigma_perfect_model_double_weight_climatology_and_trend.csv", row.names = F)
 
 ## process results-------------------
 
