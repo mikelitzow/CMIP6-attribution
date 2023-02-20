@@ -198,3 +198,4 @@ for(r in 1:length(regions)){
 
 # now save output
 write.csv(similarity, "./CMIP6/summaries/CMIP6_time_series_model_similarities.csv", row.names = F)
+
