@@ -20,13 +20,13 @@ theme_set(theme_bw())
 
 ## load and process ERSST ------------------------
 
-# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2022-12-01T00:00:00Z)][(0.0):1:(0.0)][(10):1:(66)][(110):1:(250)]", "~temp")
+# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2022-12-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(66)][(110):1:(250)]", "~temp")
 
 # load and process SST data
 # nc <- nc_open("~temp")
 
 # full North Pacific, 1854-2022
-nc <- nc_open("./CMIP6/data/nceiErsstv5_c9f8_ba40_0c79.nc")
+nc <- nc_open("./CMIP6/data/nceiErsstv5_89b2_444a_5b23.nc")
 
 # process
 
@@ -372,32 +372,37 @@ write.csv(temp.anomaly.time.series, "./CMIP6/summaries/regional_north_pacific_er
 ersst.plot <- temp.anomaly.time.series %>%
   select(region, year, annual.anomaly.unsmoothed, annual.anomaly.three.yr.running.mean)
 
-names(ersst.plot)[3:4] <- c("annual", "3yr_running_mean")
+names(ersst.plot)[3:4] <- c("Annual", "Three-year running mean")
 
 ersst.plot <- ersst.plot %>%
   pivot_longer(cols = c(-region, -year), names_to = "window")
 
 # reorder areas 
 region.order <- data.frame(region = sst.clean.names,
+                           plot_region = c("North Pacific",
+                                          "Eastern Bering Sea",
+                                          "Gulf of Alaska",
+                                          "British Columbia Coast",
+                                          "Northern California Current",
+                                          "Southern California Current"),
                            order = 1:6)
 
 ersst.plot <- left_join(ersst.plot, region.order)
 
-ersst.plot$region <- reorder(ersst.plot$region, ersst.plot$order)
+ersst.plot$plot_region <- reorder(ersst.plot$plot_region, ersst.plot$order)
 
 # reorder windows
-window.order <- data.frame(window = c("annual", "3yr_running_means"),
+window.order <- data.frame(window = c("Annual", "Three-year running mean"),
                            window.order = c(1, 2))
 
 ersst.plot <- left_join(ersst.plot, window.order)
 
-ersst.plot$window <- reorder(ersst.plot$window, ersst.plot$window.order)
-
+ersst.plot$Window <- reorder(ersst.plot$window, ersst.plot$window.order) 
 
 g <- ggplot(ersst.plot) +
-  geom_line(aes(x = year, y = value, color = window), size = 0.25) +
-  facet_wrap(~region) +
-  ylab("Anomaly wrt 1854-1949") +
+  geom_line(aes(x = year, y = value, color = Window), size = 0.25) +
+  facet_wrap(~plot_region) +
+  ylab("Anomaly wrt 1854-1949 (SD)") +
   geom_hline(yintercept = 0, lty = 2) +
   theme(axis.title.x = element_blank()) +
   scale_color_manual(values = cb[c(2,6)]) +
@@ -442,45 +447,7 @@ write.csv(regional.polygons, "./CMIP6/summaries/regional_polygons.csv", row.name
 write.csv(sst.clean.names, "./CMIP6/summaries/clean_region_names.csv", row.names = F)
 
 
-## produce full N. Pacific time series for warming comparison 1854-2021 ---------------
-
-# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2021-12-01T00:00:00Z)][(0.0):1:(0.0)][(52):1:(62)][(198):1:(226)]", "~temp")
-
-# load and process SST data
-# nc <- nc_open("~temp")
-
-nc <- nc_open("./CMIP6/data/nceiErsstv5_c5fc_6a40_5e5b.nc")
-
-# process
-
-ncvar_get(nc, "time")   # seconds since 1-1-1970
-raw <- ncvar_get(nc, "time")
-h <- raw/(24*60*60)
-d <- dates(h, origin = c(1,1,1970))
-m <- months(d)
-yr <- years(d)
-
-x <- ncvar_get(nc, "longitude")
-y <- ncvar_get(nc, "latitude")
-
-SST <- ncvar_get(nc, "sst", verbose = F)
-
-SST <- aperm(SST, 3:1)  
-
-SST <- matrix(SST, nrow=dim(SST)[1], ncol=prod(dim(SST)[2:3]))  
-
-# Keep track of corresponding latitudes and longitudes of each column:
-lat <- rep(y, length(x))   
-lon <- rep(x, each = length(y))   
-dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
-
-# plot to check
-
-temp.mean <- colMeans(SST, na.rm=T)
-z <- t(matrix(temp.mean,length(y)))
-image.plot(x,y,z, col=oceColorsPalette(64), xlab = "", ylab = "")
-contour(x, y, z, add=T)
-map('world2Hires',c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China', 'Mongolia'), fill=T,add=T, lwd=1, col="lightyellow3")
+## produce full N. Pacific time series for warming comparison 1854-2022 ---------------
 
 # calculate monthly mean
 cell.weight <- sqrt(cos(lat*pi/180))
@@ -489,15 +456,6 @@ cell.weight <- sqrt(cos(lat*pi/180))
 weighted.cell.mean <- function(x) weighted.mean(x, w = cell.weight, na.rm = T)
 obs.sst <- apply(SST, 1, weighted.cell.mean)
 
-# compare to non-weighted (out of curiosity)
-raw.mean <- rowMeans(SST, na.rm = T)
-
-check <- data.frame(weighted.mean = obs.sst,
-                    raw.mean = raw.mean)
-
-ggplot(check, aes(raw.mean, weighted.mean)) +
-  geom_point() +
-  geom_abline(slope = 1, intercept = 0, color = "red")
 
 # and annual area-weighted means
 ann.sst <- tapply(obs.sst, as.numeric(as.character(yr)), mean)
@@ -505,11 +463,11 @@ ann.sst <- tapply(obs.sst, as.numeric(as.character(yr)), mean)
 # put into dataframe
 
 full.ersst <- data.frame(region = "North_Pacific",
-                         year = 1854:2021,
+                         year = 1854:2022,
                          annual.unsmoothed = ann.sst)
 
 ggplot(full.ersst, aes(year, annual.unsmoothed)) +
   geom_line()
 
 # save
-write.csv(full.ersst, "./CMIP6/summaries/North_Pacific_ersst_1854-2021.csv", row.names = F)
+write.csv(full.ersst, "./CMIP6/summaries/North_Pacific_ersst_1854-2022.csv", row.names = F)
