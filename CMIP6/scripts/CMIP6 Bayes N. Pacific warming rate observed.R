@@ -21,7 +21,7 @@ inverse_formula <-  bf(year ~ s(ersst.warming))
 get_prior(inverse_formula, n.pac.obs.warming)
 
 inverse_warming_brm <- brm(inverse_formula,
-                           data = filter(n.pac.obs.warming, year >= 1972), # limit to 1972-on to ease fitting 
+                           data = filter(n.pac.obs.warming, year >= 1973), # limit to 1973-on to ease fitting 
                            cores = 4, chains = 4, iter = 4000,
                            save_pars = save_pars(all = TRUE),
                            control = list(adapt_delta = 0.99, max_treedepth = 16))
