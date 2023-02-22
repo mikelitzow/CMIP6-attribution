@@ -124,7 +124,7 @@ ggsave("./CMIP6/figs/combined_weights_one_panel_per_region.png", width = 10, hei
 ## plot normalized combined weight
 CMIP6_normalized_weights <- data.frame()
 
-# now normalize so that weights sum to 1 for each region
+# now normalize so that average weight = 1 in each region
 for(r in 1:length(regions)){
   # r <- 1
   
@@ -135,8 +135,6 @@ for(r in 1:length(regions)){
                                     data.frame(region = regions[r],
                                                model = temp_weight$model,
                                                combined_weight = temp_weight$combined_weight/mean(temp_weight$combined_weight)))
-  
-  
 }
 
 CMIP6_normalized_weights <- CMIP6_normalized_weights %>%
@@ -158,4 +156,70 @@ ggplot(CMIP6_normalized_weights, aes(model_number, combined_weight)) +
 
 ggsave("./CMIP6/figs/total_normalized_weight_one_panel_per_region.png", width = 10, height = 5, units = 'in')
 
+ggplot(CMIP6_normalized_weights, aes(combined_weight)) +
+  geom_histogram(bins = 15, fill = "grey", color = "black") +
+  facet_wrap(~plot_region)
+
+
+
 ## plot sst time series relative to observations, color coding for model weight
+
+cmip <- read.csv("./CMIP6/summaries/CMIP6.sst.time.series.csv") %>%
+  filter(experiment == "hist_ssp585") %>%
+  select(region, model, year, annual.unsmoothed) %>%
+  rename(annual.sst = annual.unsmoothed)
+
+ersst <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv") %>%
+  select(region, year, annual.unsmoothed) %>%
+  rename(annual.sst = annual.unsmoothed)
+
+# data to plot
+plot <- cmip %>%
+  rename(model_sst = annual.sst) %>%
+  left_join(.,ersst) %>%
+  rename(observed_sst = annual.sst) 
+
+# add model weights
+plot_weights <- CMIP6_normalized_weights %>%
+  select(-model_number) %>%
+  mutate(proportional_weight = case_when(combined_weight >= 2 ~ "> 2",
+                                  combined_weight >= 1.5 & combined_weight < 2 ~ "1.5 - 2",
+                                  combined_weight >= 1.25 & combined_weight < 1.5 ~ "1.25 - 1.5",
+                                  combined_weight >= 0.75 & combined_weight < 1.25 ~ "0.75 - 1.25",
+                                  combined_weight >= 0.5 & combined_weight < 0.75 ~ "0.5 - 0.75",
+                                  combined_weight < 0.5 ~ "< 0.5"
+                                  ),
+         weight_order = case_when(proportional_weight == "> 2" ~ 6,
+                                  proportional_weight == "1.5 - 2" ~ 5,
+                                  proportional_weight == "1.25 - 1.5" ~ 4,
+                                  proportional_weight == "0.75 - 1.25" ~ 3,
+                                  proportional_weight == "0.5 - 0.75" ~ 2,
+                                  proportional_weight == "< 0.5" ~ 1),
+         proportional_weight = reorder(proportional_weight, weight_order)) %>%
+  ungroup()
+ 
+plot <- left_join(plot, plot_weights) 
+
+plot <- left_join(plot, clean_names)
+
+# set colors
+library(RColorBrewer)
+
+display.brewer.pal(n = 9, "YlOrRd")
+display.brewer.pal(n = 9, "Greys")
+my.col1 <- brewer.pal(n = 9, "YlOrRd")
+my.col2 <- brewer.pal(n = 9, "Greys")
+
+my.col <- c(my.col2[c(3,5)], my.col1[c(3,5,7,9)])
+
+ggplot(plot, aes(year, model_sst, group = interaction(model, proportional_weight), color = proportional_weight)) +
+  geom_line(size = 0.3, alpha = 0.5) +
+  facet_wrap(~plot_region, scales = "free_y") +
+  scale_color_discrete(type = my.col) +
+  guides(color = guide_legend(override.aes = list(size = 2))) +
+  geom_line(aes(year, observed_sst), color = "black", size = 0.4) +
+  theme(axis.title.x = element_blank()) +
+  labs(y = "SST (°C)",
+       color = "Model weight")
+
+ggsave("./CMIP6/figs/weighted_models_vs_ersst.png", width = 9, height = 4.5, units = 'in')
