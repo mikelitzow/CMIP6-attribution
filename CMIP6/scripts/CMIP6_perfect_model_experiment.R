@@ -93,8 +93,7 @@ for(m in 1:length(models)){
 # set a range of sigma_s guided by Zhao et al. 2022)
 sigma_s = seq(0.2, 0.8, by = 0.1)
 
-# define a range of possible sigma_d values between 0.2 and 1.1
-# (range used in Zhao et al. 2022 Earth's Future) 
+# define a range of possible sigma_d values  
 sigma_d <- seq(0.2, 2.5, by = 0.005)
 
 # vector of true models to predict
@@ -149,15 +148,8 @@ for(r in 1:length(regions)){
       temp_sim <- sims %>%
         filter(region == regions[r],
                model == pred_mods[p],
-<<<<<<< HEAD
                comparison != temp_predict$true_model) %>% 
         mutate(sim1 = climatology_diff / median(temp_sim$climatology_diff),
-=======
-               comparison != temp_predict$true_model)
-        
-      temp_sim <- temp_sim %>%
-        mutate(sim1 = 2*climatology_diff / median(temp_sim$climatology_diff),
->>>>>>> 573659ba5ce8237a33591d89541df5c4d183f1e9
               sim2 = sd_diff / median(temp_sim$sd_diff),
               sim3 = ar_diff / median(temp_sim$ar_diff),
               sim4 = trend_diff / median(temp_sim$trend_diff))
@@ -265,9 +257,9 @@ regional_prediction$between <- NA
 
 for(i in 1:nrow(regional_prediction)){
   
-regional_prediction$between[i] <- (between = if_else(between(regional_prediction$true[i],
+regional_prediction$between[i] <- if_else(between(regional_prediction$true[i],
                                                           regional_prediction$predicted.10[i], 
-                                                          regional_prediction$predicted.90[i]), 1, 0))
+                                                          regional_prediction$predicted.90[i]), 1, 0)
 
 } # 
 
