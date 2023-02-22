@@ -1,5 +1,5 @@
 ## estimate projected warming rate for the N. Pacific from CMIP6
-## weighting models by their performance wrt 1972-2021 observed warming rate
+## weighting models by their performance wrt 1973-2022 observed warming rate
 
 library(tidyverse)
 library(rstan)
@@ -20,7 +20,8 @@ model.weights <- read.csv("./CMIP6/summaries/N_Pac_warming_model_weights.csv")
 
 # simplify weights
 weights <- model.weights  %>%
-  mutate(model_fac = as.factor(model)) %>%
+  mutate(model_fac = as.factor(prediction_model)) %>%
+  rename(weight = normalized_weight) %>%
   select(model_fac, weight)
 
 dat <- model.warming.rate %>%
