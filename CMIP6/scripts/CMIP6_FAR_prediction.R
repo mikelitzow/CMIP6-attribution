@@ -32,7 +32,7 @@ ggplot(ersst.dat, aes(year, annual.anomaly.1yr)) +
   theme(axis.title.x = element_blank()) +
   geom_hline(yintercept = 0)
 
-ggsave("./CMIP6/figs/observed_sst_anomalies_1950-2021_by_region.png", width = 8, height = 4)
+ggsave("./CMIP6/figs/observed_sst_anomalies_1950-2022_by_region.png", width = 8, height = 4)
 
 # version with just ecosystems of focus for salmon study
 just.dat <- ersst.dat %>%

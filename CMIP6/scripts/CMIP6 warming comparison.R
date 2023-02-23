@@ -17,6 +17,11 @@ new.col <- oceColorsPalette(64)
 # set theme
 theme_set(theme_bw())
 
+# make function to calculate cell weights
+cell.weight <- function(x)  sqrt(cos(x*pi/180))
+
+# and function to calculate weighted means with these weights 
+weighted.cell.mean <- function(x) weighted.mean(x, weights, na.rm = T)
 
 # start from the beginning - get list of file names
 files <- list.files("./CMIP6/CMIP6_outputs/1850-2099_runs/ssp585/")
@@ -63,6 +68,13 @@ for(i in 1:length(files)){
       x <- ncvar_get(nc, "lon")
       y <- ncvar_get(nc, "lat")
       
+      # Keep track of corresponding latitudes and longitudes of each column:
+      lat <- rep(y, length(x))   
+      lon <- rep(x, each = length(y))   
+      
+      # calculate cell weights
+      weights <- cell.weight(lat)
+      
       SST <- ncvar_get(nc, "tos", verbose = F, start = c(j,1,1,1), count = c(1,-1,-1,-1))
       
       # Change data from a 3-D array to a matrix of monthly data by grid point:
@@ -88,7 +100,7 @@ for(i in 1:length(files)){
       
       dev.off()
       
-      these.temps <- data.frame(xx = rowMeans(SST, na.rm = T))
+      these.temps <- data.frame(xx = apply(SST, 1, weighted.cell.mean))
       names(these.temps)<-  str_remove(files[i], ".nc")
       
       hist.585.temps <- cbind(hist.585.temps, these.temps)
@@ -111,7 +123,8 @@ for(i in 1:length(files)){
       lat <- rep(y, length(x))   
       lon <- rep(x, each = length(y))   
       
-      
+      # calculate cell weights
+      weights <- cell.weight(lat)
       
       SST <- ncvar_get(nc, "tos", verbose = F, start = c(j,1,1,1), count = c(1,-1,-1,-1))
       
@@ -140,7 +153,7 @@ for(i in 1:length(files)){
       dev.off()
       
       
-      these.temps <- data.frame(xx = rowMeans(SST, na.rm = T))
+      these.temps <- data.frame(xx = apply(SST, 1, weighted.cell.mean))
       names(these.temps)<-  str_remove(files[i], ".nc")
       
       piControl.temps <- cbind(piControl.temps, these.temps)
@@ -164,12 +177,13 @@ piControl.annual <- apply(piControl.temps, 2, ff)
 
 # and ersst for the same area
 
-# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2021-12-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(66)][(110):1:(250)]", "~temp")
+# download.file("https://coastwatch.pfeg.noaa.gov/erddap/griddap/nceiErsstv5.nc?sst[(1854-01-01):1:(2022-12-01T00:00:00Z)][(0.0):1:(0.0)][(20):1:(66)][(110):1:(250)]", "~temp")
 
 # load and process SST data
 # nc <- nc_open("~temp")
 
-nc <- nc_open("./CMIP6/data/nceiErsstv5_c5fc_6a40_5e5b.nc")
+# full North Pacific, 1854-2022
+nc <- nc_open("./CMIP6/data/nceiErsstv5_89b2_444a_5b23.nc")
 
 # process
 
@@ -194,8 +208,11 @@ lat <- rep(y, length(x))
 lon <- rep(x, each = length(y))
 dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
 
-# plot to check
 
+# calculate cell weights
+weights <- cell.weight(lat)
+
+# plot to check
 temp.mean <- colMeans(SST, na.rm=T)
 z <- t(matrix(temp.mean,length(y)))
 image.plot(x,y,z, col=oceColorsPalette(64))
@@ -203,15 +220,15 @@ contour(x, y, z, add=T)
 map('world2Hires',c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China', 'Mongolia'), fill=T,add=T, lwd=1, col="lightyellow3")
 
 # calculate monthly mean
-obs.n.pac.sst <- rowMeans(SST, na.rm = T)
+obs.n.pac.sst <- apply(SST, 1, weighted.cell.mean)
 
 # and annual observed means
-n.pac.ann.obs.sst <- data.frame(year = 1854:2021,
+n.pac.ann.obs.sst <- data.frame(year = 1854:2022,
                                 ersst = tapply(obs.n.pac.sst, as.numeric(as.character(yr)), mean),
                                 observations = "ERSST")
 
 # and observed warming rate
-n.pac.obs.warming <- data.frame(year = 1854:2021,
+n.pac.obs.warming <- data.frame(year = 1854:2022,
                                 ersst.warming = n.pac.ann.obs.sst$ersst - 
                                   mean(n.pac.ann.obs.sst$ersst[n.pac.ann.obs.sst$year %in% 1854:1949]))
 # switch to C from K!
@@ -285,13 +302,14 @@ warming.rate <- read.csv("./CMIP6/summaries/north_pacific_annual_modeled_sst.csv
 
 warming.rate <- warming.rate %>%
   pivot_wider(names_from = name, values_from = value)
+
 warming.rate <- as.matrix(warming.rate)
 
 # create an object to catch
 n.pac.warming.timing <- warming.rate
 
 for(j in 2:ncol(warming.rate)){
-  
+  # j <- 2
   mod <- loess(warming.rate[,j] ~ warming.rate[,1])
   n.pac.warming.timing[,j] <- predict(mod)
   
@@ -311,7 +329,7 @@ ggplot(check.plot, aes(year, value)) +
 # save
 write.csv(n.pac.warming.timing, "./CMIP6/summaries/loess_smoothed_model_warming_rates.csv", row.names = F)
 
-# get the year that each warming level is reached for each model
+# get the year that each warming level is reached for each model - based on loess fits
 levels <- c(0.5, 1, 1.5, 2)
 
 timing <- data.frame()
@@ -371,9 +389,9 @@ i <- 1
 temp <- min(n.pac.obs.warming$year[n.pac.obs.warming$trend >= levels[i]]) 
 
 obs.timing <- data.frame(level = levels,
-                         timing = c(2003, NA, NA, NA))
+                         timing = c(2002, NA, NA, NA))
 
-# 2003
+# 2002
 
 
 obs.timing$level <- as.factor(obs.timing$level)
@@ -393,18 +411,18 @@ ggsave("./CMIP6/figs/ne_pacific_warming_rate_models_obs.png", width = 5, height 
 write.csv(timing, "./CMIP6/summaries/model.north.pacific.warming.timing.csv")
 
 
-# evaluate ability of different models to predict warming for 1950-2021
+# evaluate ability of different models to predict warming for 1973-2022
 
 # reload unsmoothed warming data
 model.warming.rate <- read.csv("./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv", row.names = 1)
 
-obs.warming.rate <- read.csv("./CMIP6/summaries/ne_pacific_annual_observed_sst.csv", row.names = 1)
+obs.warming.rate <- read.csv("./CMIP6/summaries/north_pacific_annual_observed_sst.csv", row.names = 1)
 
 predict.timing <- model.warming.rate %>%
-  filter(year %in% 1972:2021) 
+  filter(year %in% 1973:2022) 
 
 response.timing <- obs.warming.rate %>%
-  filter(year %in% 1972:2021) %>%
+  filter(year %in% 1973:2022) %>%
   rename(ersst = ersst.warming)
 
 predict.timing <- left_join(predict.timing, response.timing)
@@ -412,7 +430,8 @@ predict.timing <- left_join(predict.timing, response.timing)
 # plot to check
 ggplot(predict.timing, aes(value, ersst)) +
   geom_point() +
-  facet_wrap(~name) # avoids a 'fishook' around declining rate of 1950s
+  facet_wrap(~name) +
+  geom_abline(color = "red")# avoids a 'fishook' around declining rate of 1950s
 
 
 model.warming.evaluation <- data.frame()
@@ -427,30 +446,19 @@ for(i in 1:length(models)){
     filter(name == models[i])
   
   linear.fit <- lm(ersst ~ value, data = temp)
-  
-  RSS <- c(crossprod(linear.fit$residuals))
-  Pearson.resid <- RSS / linear.fit$df.residual
-  
-  
+
   model.warming.evaluation <- rbind(model.warming.evaluation,
                                     data.frame(model = models[i],
-                                               coeff = coefficients(linear.fit)[2],
-                                               Pearson.resid = Pearson.resid))
+                                               RMSE = sqrt(mean(linear.fit$residuals^2))))
   
 }
 
 
-model.warming.evaluation # should use coefficients! (inverse of difference from 1)
+model.warming.evaluation 
 
-model.warming.evaluation$coeff.from.one <- 1-model.warming.evaluation$coeff
-model.warming.evaluation$weight <- abs(1/model.warming.evaluation$coeff.from.one)
-
-ggplot(model.warming.evaluation, aes(weight)) +
+ggplot(model.warming.evaluation, aes(RMSE)) +
   geom_histogram(bins = 8, fill = "grey", color = "black") # seems right!
 
-
-ggplot(model.warming.evaluation, aes(abs(coeff.from.one), weight)) +
-  geom_point()
 
 # save 
 write.csv(model.warming.evaluation, "./CMIP6/summaries/N_Pac_warming_model_weights.csv", row.names = F)
