@@ -148,7 +148,9 @@ for(r in 1:length(regions)){
       temp_sim <- sims %>%
         filter(region == regions[r],
                model == pred_mods[p],
-               comparison != temp_predict$true_model) %>% 
+               comparison != temp_predict$true_model)
+      
+      temp_sim <- temp_sim %>%  
         mutate(sim1 = climatology_diff / median(temp_sim$climatology_diff),
               sim2 = sd_diff / median(temp_sim$sd_diff),
               sim3 = ar_diff / median(temp_sim$ar_diff),
