@@ -79,7 +79,7 @@ dat_ce <- ce1s_1$year %>%
   mutate(Source = "Modeled warming")
 
 # add observations
-ersst <- read.csv("./CMIP6/summaries/North_Pacific_ersst_1854-2021.csv")
+ersst <- read.csv("./CMIP6/summaries/North_Pacific_ersst_1854-2022.csv")
 ersst$warming.wrt.1854.1949 <- ersst$annual.unsmoothed - mean(ersst$annual.unsmoothed[ersst$year %in% 1854:1949])
 
 obs <- ersst %>%
@@ -130,11 +130,11 @@ View(new.dat)
 write.csv(new.dat, "./CMIP6/summaries/brms_predicted_North_Pac_warming.csv", row.names = F)
 
 ## warming timings under ssp585
-# 2003 is the best timing for 0.5 degrees warming
+# 2006 is the best timing for 0.5 degrees warming
 # 2019 is the best timing for 1.0 degrees warming
-# 2021 warming is c. 1.09 degrees
-# 2033 warming is 1.5 degrees
-# 2045 warming is 2.0 degrees
+# 2022 warming is c. 1.14 degrees
+# 2031 warming is 1.5 degrees
+# 2043 warming is 2.0 degrees
 
 ## fit inverse model - year as a function of warming -----------------------------
 
