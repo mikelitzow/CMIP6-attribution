@@ -6,9 +6,6 @@
 
 library(tidyverse)
 
-# set palette
-new.col <- oceColorsPalette(64)
-
 # set theme
 theme_set(theme_bw())
 
@@ -22,6 +19,8 @@ ersst <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_time_series.cs
   select(region, year, annual.unsmoothed) %>%
   rename(annual.sst = annual.unsmoothed)
 
+View(filter(cmip, region == "North_Pacific"))
+View(filter(ersst, region == "North_Pacific"))
 
 # plot to check
 plot <- cmip %>%
@@ -138,6 +137,18 @@ ggplot(plot, aes(value)) +
 
 # now save output
 write.csv(output, "./CMIP6/summaries/CMIP6_time_series_differences.csv", row.names = F)
+
+# double-check N. Pacific for inclusion of data south of 20N
+check <- read.csv("./CMIP6/summaries/CMIP6_time_series_differences.csv")
+str(check)
+
+region_check <- check %>%
+  group_by(region) %>%
+  summarise(clim_diff_min = min(climatology_diff),
+            clim_diff_mean = mean(climatology_diff),
+            clim_diff_max = max(climatology_diff))
+
+region_check # looks fine
 
 ## step 2: calculate model similarities ----------------------------------------
 
