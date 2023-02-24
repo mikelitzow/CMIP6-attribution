@@ -1,6 +1,7 @@
 # compare each model with every other model to tune sigma-d for model weighting
 
 library(tidyverse)
+source("./CMIP6/scripts/weighted_quantiles.R")
 
 # set theme
 theme_set(theme_bw())
