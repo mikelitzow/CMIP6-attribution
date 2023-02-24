@@ -16,22 +16,7 @@ cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E
 weights <- read.csv("./CMIP6/summaries/N_Pac_warming_model_weights.csv")
 
 # load model anomaly time series (for prediction)
-anomalies <- read.csv("./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv", row.names = 1) %>%
-  rename(model = name)
-
-# compare with updated anomaly time series (that have been corrected by removing lat < 20N)
-check <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv") %>%
-  filter(region == "North_Pacific",
-         experiment == "hist_ssp585") %>%
-  select(model, year, annual.unsmoothed) %>%
-  rename(sst.check = annual.unsmoothed)
-
-compare <- left_join(anomalies, check)
-
-ggplot(compare, aes(value, sst.check)) +
-  geom_point() +
-  facet_wrap(~model, scales = "free") 
-## THIS IS THE INCORRECT COMPARISON - CMIP6.anomaly.time.series.csv IS IN UNITS OF SD; ne_pacific_annual_modeled_sst.csv IS IN UNITS OF DEGREES
+anomalies <- read.csv("./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv", row.names = 1) 
 
 # vector of model names
 models <- weights$model
