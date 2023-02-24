@@ -84,7 +84,7 @@ for(r in 1:length(regions)){
 
 # get combined weight
 CMIP6_weights <- CMIP6_weights %>%
-  mutate(combined_weight = skill_weight*independence_skill)
+  mutate(combined_weight = skill_weight*independence_weight)
 
 # plot non-normalized
 plot_CMIP6_weights <- CMIP6_weights %>%
