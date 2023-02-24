@@ -330,7 +330,7 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   experiments <-  ncvar_get(nc, "experiment", verbose = F)
   
   for(j in 1:length(experiments)){ # start j loop (each experiment)
-    # j <- 1
+    # j <- 2
     # extract dates
     
     d <- dates(ncvar_get(nc, "time"), origin = c(1,1,1970))
