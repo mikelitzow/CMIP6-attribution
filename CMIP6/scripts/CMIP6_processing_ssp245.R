@@ -95,6 +95,10 @@ for(i in 1:length(files.new)){ # start i loop (each CMIP6 model)
   lon <- rep(x, each = length(y))
   dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
   
+  # remove values < 20N
+  drop <- lat < 20
+  SST[,drop] <- NA
+  
   # and cell weight for this model 
   weights <- cell.weight(lat)
   
