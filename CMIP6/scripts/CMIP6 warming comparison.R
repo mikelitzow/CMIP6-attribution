@@ -317,8 +317,8 @@ inverse_formula <-  bf(year ~ s(warming))
 
 ## fit inverse model - year as a function of warming -----------------------------
 
-for(m in 22:length(models)){
-  
+for(m in 1:length(models)){
+  # m <- 20
   temp.dat <- warming.rate %>%
     filter(model == models[m],
            year >= 1973) # limit to 1973-on to ease fitting 
@@ -327,7 +327,7 @@ inverse_warming_brm <- brm(inverse_formula,
                            data = temp.dat, 
                            cores = 4, chains = 4, iter = 4000,
                            save_pars = save_pars(all = TRUE),
-                           control = list(adapt_delta = 0.99, max_treedepth = 16))
+                           control = list(adapt_delta = 0.999, max_treedepth = 16))
 
 saveRDS(inverse_warming_brm, file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],".rds", sep = ""))
 
@@ -336,18 +336,34 @@ saveRDS(inverse_warming_brm, file = paste("./CMIP6/brms_output/inverse_warming_b
 ## now loop through and run model diagnostics
 
 for(m in 1:length(models)){
-  m <- 1
-  mod_check <- readRDS(inverse_warming_brm, file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],".rds", sep = ""))
+  # m <- 1
+  mod_check <- readRDS(file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],".rds", sep = ""))
   
   print(paste("Model #", m, ": ", models[m], sep = ""))
 
   check_hmc_diagnostics(mod_check$fit)
 
-  neff_lowest(mod_check$fit)
+  print(neff_lowest(mod_check$fit))
 
-  rhat_highest(mod_check$fit)
-
+  print(rhat_highest(mod_check$fit))
 }
+
+# [1] "Model #20: MIROC6"
+# 
+# Divergences:
+#   1 of 8000 iterations ended with a divergence (0.0125%).
+# Try increasing 'adapt_delta' to remove the divergences.
+# 
+# Tree depth:
+#   0 of 8000 iterations saturated the maximum tree depth of 16.
+# 
+# Energy:
+#   E-BFMI indicated no pathological behavior.
+# lp__ sds_swarming_1      zs_1_1[3]  bs_swarming_1 
+# 1390.439       1639.767       1649.904       1850.701 
+# bs_swarming_1       zs_1_1[3]  sds_swarming_1            lp__ s_swarming_1[3] 
+# 1.002567        1.001854        1.001832        1.001711        1.001613
+
 
 # create an object to catch
 n.pac.warming.timing <- warming.rate
