@@ -54,7 +54,7 @@ saveRDS(warming_brm, file = "./CMIP6/brms_output/warming_brm.rds")
 warming_brm <- readRDS("./CMIP6/brms_output/warming_brm.rds")
 
 check_hmc_diagnostics(warming_brm$fit)
-neff_lowest(warming_brm$fit) # ??
+neff_lowest(warming_brm$fit) 
 rhat_highest(warming_brm$fit)
 summary(warming_brm)
 bayes_R2(warming_brm)
@@ -144,7 +144,7 @@ inverse_formula <-  bf(year | weights(weight) ~ s(warming) + (1 | model_fac))
 get_prior(inverse_formula, dat)
 
 inverse_warming_brm <- brm(inverse_formula,
-                           data = dat,
+                           data = filter(dat, year >= 1973), # limit to 1973-on to ease fitting 
                            cores = 4, chains = 4, iter = 5000,
                            save_pars = save_pars(all = TRUE),
                            control = list(adapt_delta = 0.99, max_treedepth = 16))
@@ -154,7 +154,7 @@ saveRDS(inverse_warming_brm, file = "./CMIP6/brms_output/inverse_warming_brm.rds
 inverse_warming_brm <- readRDS("./CMIP6/brms_output/inverse_warming_brm.rds")
 
 check_hmc_diagnostics(inverse_warming_brm$fit)
-neff_lowest(inverse_warming_brm$fit) # ??
+neff_lowest(inverse_warming_brm$fit) 
 rhat_highest(inverse_warming_brm$fit)
 summary(inverse_warming_brm)
 bayes_R2(inverse_warming_brm)
