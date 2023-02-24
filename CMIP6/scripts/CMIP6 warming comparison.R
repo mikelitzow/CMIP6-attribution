@@ -10,6 +10,11 @@ library(mapdata)
 library(chron)
 library(fields)
 library(oce)
+library(rstan)
+library(brms)
+library(bayesplot)
+library(bayesdfa)
+source("./CMIP6/scripts/stan_utils.R")
 
 # set palette
 new.col <- oceColorsPalette(64)
@@ -289,21 +294,60 @@ write.csv(n.pac.obs.warming, "./CMIP6/summaries/north_pacific_annual_observed_ss
 
 # need to:
 
-# 1) fit loess to full time series for each model and get estimated time
+# 1) fit brms model to full time series for each model and get estimated time
 # for 0.5, 1, 1.5, 2 degrees of warming wrt 1850-1949
 
-# 2) fit loess to ersst to calculate warming wrt 1854-1949 through 2021
+# 2) fit brms to ersst to calculate warming wrt 1854-1949 through 2021
 
 # 3) regress annual observed on annual modeled to weight each model
 
 # 4) fit Bayesian regression model to estimate overall warming event
 
-warming.rate <- read.csv("./CMIP6/summaries/north_pacific_annual_modeled_sst.csv", row.names = 1)
+warming.rate <- read.csv("./CMIP6/summaries/north_pacific_annual_modeled_sst.csv", row.names = 1) %>%
+  rename(model = name,
+         warming = value)
 
-warming.rate <- warming.rate %>%
-  pivot_wider(names_from = name, values_from = value)
+# fitting one brms model with 23 separate smooths (one for each CMIP6 model) is not practicable
+# instead, loop through the models and fit each separately
 
-warming.rate <- as.matrix(warming.rate)
+models <- unique(warming.rate$model)
+
+# set brms formula
+inverse_formula <-  bf(year ~ s(warming))
+
+## fit inverse model - year as a function of warming -----------------------------
+
+for(m in 22:length(models)){
+  
+  temp.dat <- warming.rate %>%
+    filter(model == models[m],
+           year >= 1973) # limit to 1973-on to ease fitting 
+
+inverse_warming_brm <- brm(inverse_formula,
+                           data = temp.dat, 
+                           cores = 4, chains = 4, iter = 4000,
+                           save_pars = save_pars(all = TRUE),
+                           control = list(adapt_delta = 0.99, max_treedepth = 16))
+
+saveRDS(inverse_warming_brm, file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],".rds", sep = ""))
+
+}
+
+## now loop through and run model diagnostics
+
+for(m in 1:length(models)){
+  m <- 1
+  mod_check <- readRDS(inverse_warming_brm, file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],".rds", sep = ""))
+  
+  print(paste("Model #", m, ": ", models[m], sep = ""))
+
+  check_hmc_diagnostics(mod_check$fit)
+
+  neff_lowest(mod_check$fit)
+
+  rhat_highest(mod_check$fit)
+
+}
 
 # create an object to catch
 n.pac.warming.timing <- warming.rate
