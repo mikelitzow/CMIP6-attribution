@@ -16,7 +16,9 @@ cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E
 weights <- read.csv("./CMIP6/summaries/N_Pac_warming_model_weights.csv")
 
 # load model anomaly time series (for prediction)
+# (checked the generating script for this [CMIP6 warming comparison.R] and it correctly excludes latitude <20N)
 anomalies <- read.csv("./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv", row.names = 1) 
+
 
 # vector of model names
 models <- weights$model
