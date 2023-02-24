@@ -236,17 +236,17 @@ for(r in 1:length(regions)){
                                               true_model = true_models[t],
                                               sigma_s = sigma_s[sig.s],
                                               sigma_d = sigma_d[sig.d],
-                                              variable = c("mean_1950-2014_1", "mean_1950-2014_2", "trend_1973-2022_1", "trend_1973-2022_2", 
+                                              variable = c("mean_1950-2014", "trend_1973-2022",
                                                            "sd_1950-2014", "ar_1950-2014"),
-                                              true = c(mean(temp_dat$true.climatology), mean(temp_dat$true.climatology),
-                                                       mean(temp_dat$true.trend), mean(temp_dat$true.trend),
+                                              true = c(mean(temp_dat$true.climatology),
+                                                      mean(temp_dat$true.trend),
                                                        mean(temp_dat$true.sd), mean(temp_dat$true.ar)),
-                                              predicted.10 = c(predict_climatology[1], predict_climatology[1], 
-                                                               predict_trend[1], predict_trend[1], predict_sd[1], predict_ar[1]),
-                                              predicted.mean = c(predict_climatology[2], predict_climatology[2], 
-                                                                 predict_trend[2], predict_trend[2],predict_sd[2], predict_ar[2]),
-                                              predicted.90 = c(predict_climatology[3], predict_climatology[3],
-                                                               predict_trend[3], predict_trend[3], predict_sd[3], predict_ar[3])))
+                                              predicted.10 = c(predict_climatology[1],
+                                                               predict_trend[1], predict_sd[1], predict_ar[1]),
+                                              predicted.mean = c(predict_climatology[2], 
+                                                                 predict_trend[2], predict_sd[2], predict_ar[2]),
+                                              predicted.90 = c(predict_climatology[3],
+                                                              predict_trend[3], predict_sd[3], predict_ar[3])))
       
     } # close sig.d loop (sigma_d)
     
@@ -303,7 +303,7 @@ for(r in 1:length(regions)){
 # check <- read.csv("./CMIP6/summaries/tuning_results_sigma_perfect_model.csv")
 
 # save results
-write.csv(sigma_s_d_tuning, "./CMIP6/summaries/tuning_results_sigma_perfect_model_double_weight_climatology_and_trend.csv", row.names = F)
+write.csv(sigma_s_d_tuning, "./CMIP6/summaries/tuning_results_sigma_perfect_model.csv", row.names = F)
 
 ## process results-------------------
 
