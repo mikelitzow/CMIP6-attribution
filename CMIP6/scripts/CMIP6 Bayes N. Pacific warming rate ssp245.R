@@ -77,7 +77,7 @@ saveRDS(inverse_warming_brm, file = "./CMIP6/brms_output/inverse_warming_brm_ssp
 inverse_warming_brm <- readRDS("./CMIP6/brms_output/inverse_warming_brm_ssp245.rds")
 
 check_hmc_diagnostics(inverse_warming_brm$fit)
-neff_lowest(inverse_warming_brm$fit) # ??
+neff_lowest(inverse_warming_brm$fit)
 rhat_highest(inverse_warming_brm$fit)
 summary(inverse_warming_brm)
 bayes_R2(inverse_warming_brm)
@@ -87,13 +87,6 @@ plot(conditional_effects(inverse_warming_brm), ask = FALSE)
 trace_plot(inverse_warming_brm$fit)
 
 # predict for 0.5, 1.0, 1.5, 2.0 degrees
-
-new.dat <- data.frame(warming = c(0.5, 1.0, 1.5, 2.0),
-                      model_fac = NA, weight = 1)
-
-
-pred <- posterior_epred(inverse_warming_brm, newdata = new.dat)
-
 ## SST anomaly predictions #### 95% CI
 ce1s_1 <- conditional_effects(inverse_warming_brm, effect = "warming", re_formula = NA,
                               probs = c(0.025, 0.975), resolution = 10000)
@@ -118,3 +111,7 @@ ggplot(pred.plot, aes(warming, year)) +
        y = "Year reached")
 
 ggsave("./CMIP6/figs/Bayes_estimated_warming_timing_ssp_245.png", width = 3, height = 4, units = 'in') 
+
+# and save timing estimates
+
+write.csv(pred.plot, "./CMIP6/summaries/brms_warming_timing_estimates_ssp245.csv", row.names = F)
