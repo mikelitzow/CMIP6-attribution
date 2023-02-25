@@ -160,7 +160,12 @@ ggplot(CMIP6_normalized_weights, aes(combined_weight)) +
   geom_histogram(bins = 15, fill = "grey", color = "black") +
   facet_wrap(~plot_region)
 
+# save weights
+save_weights <- CMIP6_normalized_weights %>%
+  select(region, model, combined_weight) %>%
+  rename(normalized_weight = combined_weight)
 
+write.csv(save_weights, "./CMIP6/summaries/normalized_CMIP6_weights.csv", row.names = F)
 
 ## plot sst time series relative to observations, color coding for model weight
 
