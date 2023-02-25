@@ -201,4 +201,8 @@ ggplot(pred.plot, aes(warming, year)) +
   labs(x = "North Pacific warming (°C)",
        y = "Year reached")
 
-ggsave("./CMIP6/figs/Bayes_estimated_warming_timing.png", width = 3, height = 4, units = 'in') 
+ggsave("./CMIP6/figs/Bayes_estimated_warming_timing_ssp_585.png", width = 3, height = 4, units = 'in') 
+
+# and save timing estimates
+
+write.csv(pred.plot, "./CMIP6/summaries/brms_warming_timing_estimates_ssp585.csv", row.names = F)
