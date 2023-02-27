@@ -42,25 +42,18 @@ models <- unique(cmip.anom$model)
 regions <- unique(cmip.anom$region)
 
 # load CMIP6 model weights
-model.weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv") 
+model.weights <- read.csv("./CMIP6/summaries/normalized_CMIP6_weights.csv") 
 
-# load smoothed warming trend for each model
-model.warming.trends <- read.csv("./CMIP6/summaries/loess_smoothed_model_warming_rates.csv")
+# load brms estimate of warming trend for each model
+model.warming.trends <- read.csv("./CMIP6/summaries/CMIP6_brms_warming_rate_1940-2030.csv")
 
 # check model names
 check <- data.frame(models = models,
-                    trend.names = colnames(model.warming.trends)[2:ncol(model.warming.trends)])
-check # line up, just have the -/. difference
-
-# fix
-colnames(model.warming.trends)[2:ncol(model.warming.trends)] <- models
-
-# and pivot longer 
-model.warming.trends <- model.warming.trends %>%
-  pivot_longer(cols = -year)
+                    trend.names = unique(model.warming.trends$model))
+check # line up fine
 
 
-# and load predicted warming rate across all models (weighted by 1972:2021 predictions)
+# and load predicted warming rate across all models 
 predicted.warming <- read.csv("./CMIP6/summaries/brms_predicted_North_Pac_warming.csv")
 
 
@@ -105,8 +98,8 @@ for(i in 1:length(models)){ # start i loop (models)
     
     # find years for the model of interest that fall into this warming range
     use <- model.warming.trends %>%
-      filter(name == models[i],
-             value >= warming.range[1] & value <= warming.range[2])
+      filter(model == models[i],
+             warming >= warming.range[1] & warming <= warming.range[2])
     
     
     hist.temp.use <- hist.temp %>%
