@@ -255,6 +255,10 @@ for(i in 1:length(regions)){
 # load ERSST anomalies
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
+# limit ERSST anomalies to 1950-2022 (period for attribution runs)
+ersst.anom <- ersst.anom %>%
+  filter(year %in% 1950:2022)
+
 # load CMIP6 anomalies
 cmip.anom <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv")
 
@@ -272,8 +276,8 @@ for(i in 1:length(models)){ # start i loop (models)
   # i <- 1
   
   # loop through each region
-  # for(j in 1:length(regions)) { # start j loop (regions)
-  j <- 6 # North Pacific only
+  for(j in 6) { # start j loop (regions) # locking at region == "North Pacific
+    # j <- 1
     
     # separate model and region of interest
     pre.temp <- cmip.anom %>% 
@@ -288,7 +292,7 @@ for(i in 1:length(models)){ # start i loop (models)
     
     
     # loop through each year of observation
-    for(k in 1:nrow(ersst.temp)){ # start k loop (final two years)
+    for(k in 1:nrow(ersst.temp)){ # start k loop (years)
       # k <- 5
       
       # record outcome for annual unsmoothed, annual 2-yr running mean, and annual 3-yr running mean
@@ -309,34 +313,49 @@ for(i in 1:length(models)){ # start i loop (models)
       
       # add to df
       preindustrial.NP <- rbind(preindustrial.NP,
-                                            data.frame(model = models[i],
-                                                       period = "preindustrial",
-                                                       region = regions[j],
-                                                       ersst.year = ersst.temp$year[k],
-                                                       
-                                                       annual.anomaly.1yr = ersst.temp$annual.anomaly.unsmoothed[k],
-                                                       annual.1yr.events = annual.1yr,
-                                                       
-                                                       annual.anomaly.2yr = ersst.temp$annual.anomaly.two.yr.running.mean[k],
-                                                       annual.2yr.events = annual.2yr,
-                                                       
-                                                       annual.anomaly.3yr = ersst.temp$annual.anomaly.three.yr.running.mean[k],
-                                                       annual.3yr.events = annual.3yr,
-                                                       
-                                                       winter.anomaly.1yr = ersst.temp$winter.anomaly.unsmoothed[k],
-                                                       winter.1yr.events = winter.1yr,
-                                                       
-                                                       winter.anomaly.2yr = ersst.temp$winter.anomaly.two.yr.running.mean[k],
-                                                       winter.2yr.events = winter.2yr,
-                                                       
-                                                       winter.anomaly.3yr = ersst.temp$winter.anomaly.three.yr.running.mean[k],
-                                                       winter.3yr.events = winter.3yr))
+                                      data.frame(model = models[i],
+                                                 period = "preindustrial",
+                                                 region = regions[j],
+                                                 ersst.year = ersst.temp$year[k],
+                                                 
+                                                 annual.anomaly.1yr = ersst.temp$annual.anomaly.unsmoothed[k],
+                                                 annual.1yr.events = annual.1yr,
+                                                 
+                                                 annual.anomaly.2yr = ersst.temp$annual.anomaly.two.yr.running.mean[k],
+                                                 annual.2yr.events = annual.2yr,
+                                                 
+                                                 annual.anomaly.3yr = ersst.temp$annual.anomaly.three.yr.running.mean[k],
+                                                 annual.3yr.events = annual.3yr,
+                                                 
+                                                 winter.anomaly.1yr = ersst.temp$winter.anomaly.unsmoothed[k],
+                                                 winter.1yr.events = winter.1yr,
+                                                 
+                                                 winter.anomaly.2yr = ersst.temp$winter.anomaly.two.yr.running.mean[k],
+                                                 winter.2yr.events = winter.2yr,
+                                                 
+                                                 winter.anomaly.3yr = ersst.temp$winter.anomaly.three.yr.running.mean[k],
+                                                 winter.3yr.events = winter.3yr))
       
     } # close k loop (ersst years)
     
-  # } # close j loop (regions)
+  } # close j loop (regions)
   
 } # close i loop (models)
 
+
+# check
+
+
+check <- preindustrial.NP %>%
+  group_by(period, region, ersst.year) %>%
+  summarise(count = n())
+  
+
 # and save 
 write.csv(preindustrial.NP, "./CMIP6/summaries/North_Pacific_preindustrial_outcomes_updated.csv", row.names = F)
+
+check.ebs <- read.csv("./CMIP6/summaries/Eastern_Bering_Sea_preindustrial_outcomes_updated.csv")
+
+check2 <- check.ebs %>%
+  group_by(period, region, ersst.year) %>%
+  summarise(count = n())
