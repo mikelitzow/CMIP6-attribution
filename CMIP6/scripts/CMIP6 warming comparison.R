@@ -316,11 +316,10 @@ models <- unique(warming.rate$model)
 
 warming_formula <-  bf(warming ~ s(year))
 
-for(m in 23:length(models)){
+for(m in 1:length(models)){
 # m <- 12
 temp.dat <- warming.rate %>%
-  filter(model == models[m],
-         year %in% 1940:2030) # provide data for rolling windows spanning 1950-2022
+  filter(model == models[m]) 
 
 warming_brm <- brm(warming_formula,
                    data = temp.dat,
@@ -368,7 +367,7 @@ for(m in 1:length(models)){
 }
 
 # save
-write.csv(warming_out, "./CMIP6/summaries/CMIP6_brms_warming_rate_1940-2030.csv", row.names = F)
+write.csv(warming_out, "./CMIP6/summaries/CMIP6_brms_warming_rate.csv", row.names = F)
 
 ## fit inverse model - year as a function of warming -----------------------------
 
