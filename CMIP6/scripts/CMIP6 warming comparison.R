@@ -350,19 +350,25 @@ for(m in 1:length(models)){
 
 warming_out <- data.frame()
 
+new.dat <- data.frame(year = 1940:2030)
+
 for(m in 1:length(models)){
   # m <- 23
   mod <- readRDS(file = paste("./CMIP6/brms_output/warming_brm_", models[m],".rds", sep = ""))
   
   print(paste("Model #", m, ": ", models[m], sep = ""))
+ 
+  pred <- posterior_epred(mod, newdata = new.dat)
   
-  
-  
-  
+  warming_out <- rbind(warming_out,
+                       data.frame(model = models[m],
+                                  year = 1940:2030,
+                                  warming = colMeans(pred)))
   
 }
 
-
+# save
+write.csv(warming_out, "./CMIP6/summaries/CMIP6_brms_warming_rate_1940-2030.csv", row.names = F)
 
 ## fit inverse model - year as a function of warming -----------------------------
 
