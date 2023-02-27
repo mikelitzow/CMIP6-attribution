@@ -312,10 +312,64 @@ warming.rate <- read.csv("./CMIP6/summaries/north_pacific_annual_modeled_sst.csv
 
 models <- unique(warming.rate$model)
 
+## fit brms model to each CMIP6 time series to estimate warming for each year------
+
+warming_formula <-  bf(warming ~ s(year))
+
+for(m in 23:length(models)){
+# m <- 12
+temp.dat <- warming.rate %>%
+  filter(model == models[m],
+         year %in% 1940:2030) # provide data for rolling windows spanning 1950-2022
+
+warming_brm <- brm(warming_formula,
+                   data = temp.dat,
+                   cores = 4, chains = 4, iter = 5000,
+                   save_pars = save_pars(all = TRUE),
+                   control = list(adapt_delta = 0.999, max_treedepth = 16))
+
+saveRDS(warming_brm, file = paste("./CMIP6/brms_output/warming_brm_", models[m], ".rds", sep = ""))
+
+}
+
+# run diagnostics for each model
+for(m in 1:length(models)){
+  # m <- 23
+  mod_check <- readRDS(file = paste("./CMIP6/brms_output/warming_brm_", models[m],".rds", sep = ""))
+  
+  print(paste("Model #", m, ": ", models[m], sep = ""))
+  
+  check_hmc_diagnostics(mod_check$fit)
+  
+  print(neff_lowest(mod_check$fit))
+  
+  print(rhat_highest(mod_check$fit))
+}
+
+# finally, loop through each model and record predicted warming by year
+
+warming_out <- data.frame()
+
+for(m in 1:length(models)){
+  # m <- 23
+  mod <- readRDS(file = paste("./CMIP6/brms_output/warming_brm_", models[m],".rds", sep = ""))
+  
+  print(paste("Model #", m, ": ", models[m], sep = ""))
+  
+  
+  
+  
+  
+}
+
+
+
+## fit inverse model - year as a function of warming -----------------------------
+
+
 # set brms formula
 inverse_formula <-  bf(year ~ s(warming))
 
-## fit inverse model - year as a function of warming -----------------------------
 
 for(m in 1:length(models)){
   # m <- 20
@@ -333,7 +387,7 @@ saveRDS(inverse_warming_brm, file = paste("./CMIP6/brms_output/inverse_warming_b
 
 }
 
-## now loop through and run model diagnostics
+## now loop through again and run model diagnostics
 
 for(m in 1:length(models)){
   # m <- 1
@@ -363,6 +417,9 @@ for(m in 1:length(models)){
 # 1390.439       1639.767       1649.904       1850.701 
 # bs_swarming_1       zs_1_1[3]  sds_swarming_1            lp__ s_swarming_1[3] 
 # 1.002567        1.001854        1.001832        1.001711        1.001613
+
+
+# loop through each model and capture predicted warming rate
 
 
 # create an object to catch
