@@ -19,9 +19,9 @@ library(tidyverse)
 # load ERSST anomalies
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
-# limit ERSST anomalies to 1950-2021 (period for attribution runs)
+# limit ERSST anomalies to 1950-2022 (period for attribution runs)
 ersst.anom <- ersst.anom %>%
-  filter(year %in% 1950:2021)
+  filter(year %in% 1950:2022)
 
 # load CMIP6 anomalies
 cmip.anom <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv")
