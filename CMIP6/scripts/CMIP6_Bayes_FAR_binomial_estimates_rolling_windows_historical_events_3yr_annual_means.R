@@ -27,20 +27,19 @@ historical <- read.csv(paste("./CMIP6/summaries/", regions[i], "_historical_outc
 outcomes <- rbind(preindustrial, historical)
 
 # load model weights (based on ar(1), correlation, bias)
-weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv")
+weights <- read.csv("./CMIP6/summaries/normalized_CMIP6_weights.csv")
 
 weights <- weights %>%
-   filter(window == "annual",
-          region == regions[i]) %>%
-   select(model, scaled.total.weight) %>%
-   rename(model_weight = scaled.total.weight)
+   filter(region == regions[i]) %>%
+   select(model, normalized_weight) %>%
+   rename(model_weight = normalized_weight)
 
 outcomes <- left_join(outcomes, weights) %>%
-    select(model, model_weight, period, region, ersst.year, annual.anomaly.3yr, annual.3yr.events)
+    select(model, model_weight, period, region, ersst.year, annual.anomaly.1yr, annual.1yr.events)
 
-# drop NAs due to smoothing
-drop <- is.na(outcomes$annual.anomaly.3yr)
-outcomes <- outcomes[!drop,]
+# # drop NAs due to smoothing
+# drop <- is.na(outcomes$annual.anomaly.3yr)
+# outcomes <- outcomes[!drop,]
 
 ## brms: setup ---------------------------------------------
 
@@ -51,7 +50,7 @@ dt[model == "ACCESS-CM2" & period == "historical" & ersst.year == 2017, ]
 
 prop <- dt[ , .(count = sum(annual.3yr.events, na.rm = T),
                 N = .N,
-                annual.anomaly.3yr = unique(annual.anomaly.3yr),
+                annual.anomaly.1yr = unique(annual.anomaly.1yr),
                 model_weight = unique(model_weight)),
            by = .(period, model, ersst.year)]
 prop[ , prop := count / N]
@@ -70,7 +69,7 @@ print(g)
 
 
 form <-  bf(count | trials(N) + weights(model_weight, scale = TRUE) ~
-            period + s(annual.anomaly.3yr, by = period, k = 6) +
+            period + s(annual.anomaly.1yr, by = period, k = 6) +
             s(ersst.year, by = period, k = 6) + (1 | model_fac))
 
 far_brms2 <- brm(form,
@@ -83,7 +82,7 @@ far_brms2 <- brm(form,
 
 # saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_binomial2.rds", sep = ""))
 
-saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "_3yr_mean_annual_sst_rolling_window_binomial2.rds", sep = ""))
+saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "mean_annual_sst_rolling_window_binomial2.rds", sep = ""))
 
  }
 ## ~2.5 hours run time
