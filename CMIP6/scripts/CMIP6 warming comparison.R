@@ -316,7 +316,7 @@ models <- unique(warming.rate$model)
 
 warming_formula <-  bf(warming ~ s(year))
 
-for(m in 1:length(models)){
+for(m in 22:length(models)){
 # m <- 12
 temp.dat <- warming.rate %>%
   filter(model == models[m]) 
@@ -325,7 +325,7 @@ warming_brm <- brm(warming_formula,
                    data = temp.dat,
                    cores = 4, chains = 4, iter = 5000,
                    save_pars = save_pars(all = TRUE),
-                   control = list(adapt_delta = 0.999, max_treedepth = 16))
+                   control = list(adapt_delta = 0.99, max_treedepth = 16))
 
 saveRDS(warming_brm, file = paste("./CMIP6/brms_output/warming_brm_", models[m], ".rds", sep = ""))
 
@@ -349,7 +349,7 @@ for(m in 1:length(models)){
 
 warming_out <- data.frame()
 
-new.dat <- data.frame(year = 1940:2030)
+new.dat <- data.frame(year = 1850:2099)
 
 for(m in 1:length(models)){
   # m <- 23
@@ -361,7 +361,7 @@ for(m in 1:length(models)){
   
   warming_out <- rbind(warming_out,
                        data.frame(model = models[m],
-                                  year = 1940:2030,
+                                  year = 1850:2099,
                                   warming = colMeans(pred)))
   
 }
