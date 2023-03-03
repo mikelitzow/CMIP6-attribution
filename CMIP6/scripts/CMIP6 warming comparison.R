@@ -367,7 +367,7 @@ for(m in 1:length(models)){
 }
 
 # save
-write.csv(warming_out, "./CMIP6/summaries/CMIP6_brms_warming_rate.csv", row.names = F)
+write.csv(warming_out, "./CMIP6/summaries/CMIP6_brms_warming_rate_ssp585.csv", row.names = F)
 
 ## fit inverse model - year as a function of warming -----------------------------
 
@@ -424,7 +424,33 @@ for(m in 1:length(models)){
 # 1.002567        1.001854        1.001832        1.001711        1.001613
 
 
+## brms estimates of warming timing for each model-----------------------------
+warming.timing <- data.frame()
 
+for(m in 1:length(models)){
+  # m <- 1
+  inverse_warming_brm <- readRDS(file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],".rds", sep = ""))
+  
+  print(paste("Model #", m, ": ", models[m], sep = ""))
+  
+  ce1s_1 <- conditional_effects(inverse_warming_brm, effect = "warming", re_formula = NA,
+                                probs = c(0.025, 0.975), resolution = 10000)
+  
+  index <- ce1s_1$warming$warming
+  
+  choose <- c(which.min(abs(index - 0.5)),
+              which.min(abs(index - 1.0)),
+              which.min(abs(index - 1.5)),
+              which.min(abs(index - 2.0)))
+  
+  warming.timing <- rbind(warming.timing,
+                          data.frame(model = models[m],
+                            warming = c(0.5, 1.0, 1.5, 2.0),
+                          year = ce1s_1$warming$estimate__[choose],
+                          UCI = ce1s_1$warming$upper__[choose],
+                          LCI = ce1s_1$warming$lower__[choose]))
+}
+## warming model weights ----------------------------------
 # evaluate ability of different models to predict warming for 1973-2022
 
 # reload unsmoothed warming data
@@ -478,4 +504,3 @@ ggplot(model.warming.evaluation, aes(RMSE)) +
 write.csv(model.warming.evaluation, "./CMIP6/summaries/N_Pac_warming_model_weights.csv", row.names = F)
 
 
-# next, brms estimates of warming timing
