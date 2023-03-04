@@ -433,24 +433,5 @@ for(m in 1:length(models)){
                           LCI = ce1s_1$warming$lower__[choose]))
 }
 
-# plot to examine
-
-# reload unsmoothed warming data
-model.warming.rate <- read.csv("./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv", row.names = 1)
-
-obs.warming.rate <- read.csv("./CMIP6/summaries/north_pacific_annual_observed_sst.csv", row.names = 1)
-
-predict.timing <- model.warming.rate %>%
-  filter(year %in% 1973:2022) 
-
-response.timing <- obs.warming.rate %>%
-  filter(year %in% 1973:2022) %>%
-  rename(ersst = ersst.warming)
-
-predict.timing <- left_join(predict.timing, response.timing)
-
-# plot to check
-ggplot(predict.timing, aes(value, ersst)) +
-  geom_point() +
-  facet_wrap(~name) +
-  geom_abline(color = "red")# avoids a 'fishook' around declining rate of 1950s
+# save
+write.csv(warming.timing, "./CMIP6/summaries/CMIP6_brms_warming_timing_ssp245.csv", row.names = F)
