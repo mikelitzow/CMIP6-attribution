@@ -432,8 +432,8 @@ for(m in 1:length(models)){
                           UCI = ce1s_1$warming$upper__[choose],
                           LCI = ce1s_1$warming$lower__[choose]))
 }
-## warming model weights ----------------------------------
-# evaluate ability of different models to predict warming for 1973-2022
+
+# plot to examine
 
 # reload unsmoothed warming data
 model.warming.rate <- read.csv("./CMIP6/summaries/ne_pacific_annual_modeled_sst.csv", row.names = 1)
@@ -454,35 +454,3 @@ ggplot(predict.timing, aes(value, ersst)) +
   geom_point() +
   facet_wrap(~name) +
   geom_abline(color = "red")# avoids a 'fishook' around declining rate of 1950s
-
-
-model.warming.evaluation <- data.frame()
-
-models <- unique(predict.timing$name)
-
-for(i in 1:length(models)){
-  
-  # i <- 1
-  
-  temp <- predict.timing %>%
-    filter(name == models[i])
-  
-  linear.fit <- lm(ersst ~ value, data = temp)
-
-  model.warming.evaluation <- rbind(model.warming.evaluation,
-                                    data.frame(model = models[i],
-                                               RMSE = sqrt(mean(linear.fit$residuals^2))))
-  
-}
-
-
-model.warming.evaluation 
-
-ggplot(model.warming.evaluation, aes(RMSE)) +
-  geom_histogram(bins = 8, fill = "grey", color = "black") # seems right!
-
-
-# save 
-write.csv(model.warming.evaluation, "./CMIP6/summaries/N_Pac_warming_model_weights.csv", row.names = F)
-
-
