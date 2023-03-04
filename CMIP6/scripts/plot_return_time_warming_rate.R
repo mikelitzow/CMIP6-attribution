@@ -106,7 +106,7 @@ time.plot <- ggplot(pred.plot, aes(warming, year, color = source)) +
   theme(legend.position = c(0.75, 0.15),
         legend.title = element_blank())
 
-# get extremes.plot from CMIP^_Bayes_more_extreme_probabilities.R
+# get extremes.plot from CMIP6_Bayes_more_extreme_probabilities.R
 
 # and combine
 
