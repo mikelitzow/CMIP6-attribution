@@ -373,7 +373,7 @@ models <- unique(warming.rate$model)
 inverse_formula <-  bf(year ~ s(warming))
 
 
-for(m in 1:length(models)){
+for(m in 20:length(models)){
   # m <- 20
   temp.dat <- warming.rate %>%
     filter(model == models[m],
@@ -393,7 +393,7 @@ saveRDS(inverse_warming_brm, file = paste("./CMIP6/brms_output/inverse_warming_b
 
 for(m in 1:length(models)){
   # m <- 1
-  mod_check <- readRDS(file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],".rds", sep = ""))
+  mod_check <- readRDS(file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],"_ssp245.rds", sep = ""))
   
   print(paste("Model #", m, ": ", models[m], sep = ""))
 
@@ -404,29 +404,14 @@ for(m in 1:length(models)){
   print(rhat_highest(mod_check$fit))
 }
 
-# [1] "Model #20: MIROC6"
-# 
-# Divergences:
-#   1 of 8000 iterations ended with a divergence (0.0125%).
-# Try increasing 'adapt_delta' to remove the divergences.
-# 
-# Tree depth:
-#   0 of 8000 iterations saturated the maximum tree depth of 16.
-# 
-# Energy:
-#   E-BFMI indicated no pathological behavior.
-# lp__ sds_swarming_1      zs_1_1[3]  bs_swarming_1 
-# 1390.439       1639.767       1649.904       1850.701 
-# bs_swarming_1       zs_1_1[3]  sds_swarming_1            lp__ s_swarming_1[3] 
-# 1.002567        1.001854        1.001832        1.001711        1.001613
-
+# all good
 
 ## brms estimates of warming timing for each model-----------------------------
 warming.timing <- data.frame()
 
 for(m in 1:length(models)){
   # m <- 1
-  inverse_warming_brm <- readRDS(file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],".rds", sep = ""))
+  inverse_warming_brm <- readRDS(file = paste("./CMIP6/brms_output/inverse_warming_brm_", models[m],"_ssp245.rds", sep = ""))
   
   print(paste("Model #", m, ": ", models[m], sep = ""))
   
