@@ -9,7 +9,7 @@ theme_set(theme_bw())
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
 # plot distributions to check
-ggplot(filter(ersst.anom, year %in% 1950:2021), aes(annual.anomaly.unsmoothed)) +
+ggplot(filter(ersst.anom, year %in% 1950:2022), aes(annual.anomaly.unsmoothed)) +
   geom_density(fill = "grey") +
   facet_wrap(~region) +
   xlim(-3, 6.5)
@@ -21,17 +21,21 @@ ersst.max <- ersst.anom %>%
 
 
 # and define the mean maximum observed across all six time series
-mean.max <- round(mean(ersst.max$max.anomaly), 1) # 4.02, rounding to 4 SD
+mean.max <- round(mean(ersst.max$max.anomaly), 1) # 4.04, rounding to 4 SD
 
 
 # load CMIP6 anomalies
 cmip.anom <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv")
 
 # load CMIP6 model weights
-model.weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv") 
+model.weights <- read.csv("./CMIP6/summaries/normalized_CMIP6_weights.csv") 
 
 # load estimated warming level timing for each model
-timing <- read.csv("./CMIP6/summaries/model.north.pacific.warming.timing.csv")
+timing <- read.csv("./CMIP6/summaries/CMIP6_brms_warming_timing_ssp585.csv")
+
+# and round decimal years for timing to integer
+timing <- timing %>%
+  mutate(year = round(year))
 
 # get vector of model names
 models <- unique(cmip.anom$model)
@@ -47,7 +51,7 @@ extreme.outcomes <- data.frame()
 extreme.sd <- c(4, 5)
 
 for(x in 1:length(extreme.sd)) { # start x loop (extremes)
-
+  # x <- 1
 # loop through each model
 for(i in 1:length(models)){ # start i loop (models)
   # i <- 1
@@ -102,13 +106,12 @@ filter(extreme.outcomes, count > 0)
 
 # loop through two extreme levels - SD = 4 and SD = 5
 for(x in 1:length(extreme.sd)) { # start x loop (extremes)
-
+  # x <- 1
 # loop through each model
 for(i in 1:length(models)){ # start i loop (models)
   # i <- 1
   
   # loop through each region
-
   for(j in 1:length(regions)){ # start j loop (regions)
   # j <- 1
   
@@ -124,7 +127,7 @@ for(i in 1:length(models)){ # start i loop (models)
   
   ## pull 1950 - 0.5 degrees warming
   
-  use = 1950:timing$year[timing$model == models[i] & timing$level == 0.5]
+  use = 1950:timing$year[timing$model == models[i] & timing$warming == 0.5]
   
   # and limit hist.temp to these years
   hist.temp.use <- hist.temp %>%
@@ -141,7 +144,7 @@ for(i in 1:length(models)){ # start i loop (models)
   
   ## pull 0.5 - 1.0 degrees warming
   
-  use = timing$year[timing$model == models[i] & timing$level == 0.5]:timing$year[timing$model == models[i] & timing$level == 1.0]
+  use = timing$year[timing$model == models[i] & timing$warming == 0.5]:timing$year[timing$model == models[i] & timing$warming == 1.0]
 
   # and limit hist.temp to these years
   hist.temp.use <- hist.temp %>%
@@ -158,7 +161,7 @@ for(i in 1:length(models)){ # start i loop (models)
   
   ## pull 1.0 - 1.5 degrees warming
   
-  use = timing$year[timing$model == models[i] & timing$level == 1.0]:timing$year[timing$model == models[i] & timing$level == 1.5]
+  use = timing$year[timing$model == models[i] & timing$warming == 1.0]:timing$year[timing$model == models[i] & timing$warming == 1.5]
   
   # and limit hist.temp to these years
   hist.temp.use <- hist.temp %>%
@@ -176,7 +179,7 @@ for(i in 1:length(models)){ # start i loop (models)
   
   ## pull 1.5 - 2.0 degrees warming
   
-  use = timing$year[timing$model == models[i] & timing$level == 1.5]:timing$year[timing$model == models[i] & timing$level == 2.0]
+  use = timing$year[timing$model == models[i] & timing$warming == 1.5]:timing$year[timing$model == models[i] & timing$warming == 2.0]
   
   # and limit hist.temp to these years
   hist.temp.use <- hist.temp %>%
