@@ -51,47 +51,58 @@ lat <- rep(y, length(x))
 lon <- rep(x, each = length(y))
 dimnames(SST) <- list(as.character(d), paste("N", lat, "E", lon, sep=""))
 
-# plot to check
-png("./CMIP6/figs/study_site.png", width = 6, height = 6, units = 'in', res = 300)
+# identify polygons for each area
 
-
-temp.mean <- colMeans(SST, na.rm=T)
-z <- t(matrix(temp.mean,length(y)))
-image.plot(x,y,z, col=oceColorsPalette(64), xlab = "", ylab = "")
-contour(x, y, z, add=T)
-map('world2Hires',c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China', 'Mongolia'), fill=T,add=T, lwd=1, col="lightyellow3")
 
 # extract study area
 # 54-66 deg. N, 188-202 deg. E
 ebs.x <- c(183, 183, 203, 203, 191) 
 ebs.y <- c(53, 65, 65, 57.5, 53)
 
-polygon(ebs.x, ebs.y, border = "red", lwd = 2)
-
 # GOA polygon
 goa.x <- c(201, 201, 205, 208, 225, 231, 201)
 goa.y <- c(55, 56.5, 59, 61, 61, 55, 55)
 
-polygon(goa.x, goa.y, border = "red", lwd = 2)
 
 # BC polygon
 bc.x <- c(231, 238, 228, 225, 225)
 bc.y <- c(55, 49, 49, 53, 55)
 
-polygon(bc.x, bc.y, border = "red", lwd = 2)
-
 # northern CCE polygon
 ncc.x <- c(238, 238, 233, 233, 238)
 ncc.y <- c(49, 41, 41, 49, 49)
-
-polygon(ncc.x, ncc.y, border = "red", lwd = 2)
 
 # southern CCE polygon
 scc.x <- c(238, 243, 237, 233, 233, 238)
 scc.y <- c(41, 33, 33, 39, 41, 41)
 
+
+# plot to check
+png("./CMIP6/figs/study_site.png", width = 7, height = 6, units = 'in', res = 300)
+
+par(las = 1)
+
+temp.mean <- colMeans(SST, na.rm=T)
+z <- t(matrix(temp.mean,length(y)))
+image.plot(x,y,z, col=oceColorsPalette(64), xlab = "°E Longitude", ylab = "°N Latitude",
+           legend.lab = "°C")
+contour(x, y, z, add=T)
+map('world2Hires',c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China', 'Mongolia'), fill=T,add=T, lwd=1, col="lightyellow3")
+
+# plot regional polygons
+polygon(ebs.x, ebs.y, border = "red", lwd = 2)
+polygon(goa.x, goa.y, border = "red", lwd = 2)
+polygon(bc.x, bc.y, border = "red", lwd = 2)
+polygon(ncc.x, ncc.y, border = "red", lwd = 2)
 polygon(scc.x, scc.y, border = "red", lwd = 2)
 
+text(x = 211, y = 63.5, "EBS", cex = 1.2)
+text(x = 237, y = 58.5, "GOA", cex = 1.2)
+text(x = 242, y = 52, "BCC", cex = 1.2)
+text(x = 245, y = 45, "NCC", cex = 1.2)
+text(x = 245, y = 39, "SCC", cex = 1.2)
+
+mtext("A", cex = 1.8, side = 3, adj = -0.1, line = -1)
 dev.off()
 # those  areas look fine
 
