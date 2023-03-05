@@ -45,7 +45,7 @@ regions <- unique(cmip.anom$region)
 model.weights <- read.csv("./CMIP6/summaries/normalized_CMIP6_weights.csv") 
 
 # load brms estimate of warming trend for each model
-model.warming.trends <- read.csv("./CMIP6/summaries/CMIP6_brms_warming_rate_1940-2030.csv")
+model.warming.trends <- read.csv("./CMIP6/summaries/CMIP6_brms_warming_rate.csv")
 
 # check model names
 check <- data.frame(models = models,
@@ -64,22 +64,23 @@ predicted.warming <- read.csv("./CMIP6/summaries/brms_predicted_North_Pac_warmin
 # -limit each model to the relevant warming range in model.warming.trends
 # calculate proportion as big as or larger than ersst anomaly
 
-
+# create df of historical outcomes
+historical.rolling.window.outcomes <- data.frame()  
 
 # loop through each region
-for(j in 1:length(regions)){ # start i loop (models)
+for(i in 1:length(models)){ # start i loop (models)
   # i <- 1
- 
-  # break out the relevant region from ersst
-  ersst.temp <- ersst.anom %>%
-    filter(region == regions[j])
+
   
-  # create df of historical outcomes
-  historical.rolling.window.outcomes <- data.frame()  
+
   # loop through each model
 
-  for(i in 1:length(models)){ # start j loop (regions)
+  for(j in 1:length(regions)){ # start j loop (regions)
   # j <- 3 
+    
+    # break out the relevant region from ersst
+    ersst.temp <- ersst.anom %>%
+      filter(region == regions[j],)
   
   # separate model and region of interest
   hist.temp <- cmip.anom %>% 
@@ -100,7 +101,7 @@ for(j in 1:length(regions)){ # start i loop (models)
     
     # find years for the model of interest that fall into this warming range
     use <- model.warming.trends %>%
-      filter(model == models[i]) ,
+      filter(model == models[i],
              warming >= warming.range[1] & warming <= warming.range[2])
     
     
@@ -152,19 +153,17 @@ for(j in 1:length(regions)){ # start i loop (models)
   
   } # close i loop (models)
 
-  # and save results
-  write.csv(temp, file = paste("./CMIP6/summaries/", regions[i], "_historical_outcomes_rolling_window.csv", sep = ""), row.names = F)
-  
+
 } # close j loop (regions)
 
-# # break into separate objects for each region and save
-# 
-# for(i in 1:length(regions)){
-#   
-#   temp <- historical.rolling.window.outcomes %>%
-#     filter(region == regions[i]) 
-#   
-#   write.csv(temp, file = paste("./CMIP6/summaries/", regions[i], "_historical_outcomes_rolling_window.csv", sep = ""), row.names = F)
-#   
-# }
+# break into separate objects for each region and save
+
+for(i in 1:length(regions)){
+
+  temp <- historical.rolling.window.outcomes %>%
+    filter(region == regions[i])
+
+  write.csv(temp, file = paste("./CMIP6/summaries/", regions[i], "_historical_outcomes_rolling_window.csv", sep = ""), row.names = F)
+
+}
 
