@@ -21,13 +21,8 @@ extremes <- read.csv("./CMIP6/summaries/more_extreme_annual_anomalies.csv")
 # prediction of observed N. Pac. weighting
 
 # load regional model weights 
-regional_weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv")
+regional_weights <- read.csv("./CMIP6/summaries/normalized_CMIP6_weights.csv")
   
-regional_weights <- regional_weights %>%
-  filter(window == "annual") %>%
-  select(model, region, scaled.total.weight) %>%
-  rename(regional_weight = scaled.total.weight)
-
 # calculate region-specific model warming weights (based on prediction of experienced warming)
 # save these values for future analysis
 ersst <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv")
@@ -71,49 +66,49 @@ data <- data %>%
   left_join(., ersst)
 
 
-# loop through and fit linear ersst - model regressions to get weights
-regional_warming_weights <- data.frame()
+# # loop through and fit linear ersst - model regressions to get weights
+# regional_warming_weights <- data.frame()
+# 
+# regions <- unique(data$region)
+# models <- unique(data$model)
+# 
+# for(r in 1:length(regions)){ # loop through regions
+#   # r <- 1
+#   
+#   for(m in 1:length(models)){ # loop through models
+#     # m <- 1
+#     
+#     temp.dat <- data %>%
+#       filter(region == regions[r],
+#              model == models[m],
+#              year %in% 1972:2021)
+#     
+#     
+#     mod <- lm(ersst.anomaly ~ anomaly, data = temp.dat)
+#     
+#     regional_warming_weights <- rbind(regional_warming_weights,
+#                                       data.frame(region = regions[r],
+#                                                  model = models[m],
+#                                                  regional_warming_weight = 1 / abs(1-coefficients(mod)[2]))) # inverse of difference from 1!
+#     }
+#   
+#   }
+# 
+# 
+# weights <- left_join(regional_weights, regional_warming_weights) %>%
+#   mutate(total_weight = regional_weight * regional_warming_weight)
+# 
+# 
+# # plot to examine
+# ggplot(weights, aes(regional_weight, regional_warming_weight)) +
+#   geom_point() +
+#   facet_wrap(~region, scale = "free_y")
+# 
+# ggplot(weights, aes(total_weight)) +
+#   geom_histogram(fill = "grey", color = "black", bins = 20) +
+#   facet_wrap(~region, scale = "free_x") # I think this looks reasonable
 
-regions <- unique(data$region)
-models <- unique(data$model)
-
-for(r in 1:length(regions)){ # loop through regions
-  # r <- 1
-  
-  for(m in 1:length(models)){ # loop through models
-    # m <- 1
-    
-    temp.dat <- data %>%
-      filter(region == regions[r],
-             model == models[m],
-             year %in% 1972:2021)
-    
-    
-    mod <- lm(ersst.anomaly ~ anomaly, data = temp.dat)
-    
-    regional_warming_weights <- rbind(regional_warming_weights,
-                                      data.frame(region = regions[r],
-                                                 model = models[m],
-                                                 regional_warming_weight = 1 / abs(1-coefficients(mod)[2]))) # inverse of difference from 1!
-    }
-  
-  }
-
-
-weights <- left_join(regional_weights, regional_warming_weights) %>%
-  mutate(total_weight = regional_weight * regional_warming_weight)
-
-
-# plot to examine
-ggplot(weights, aes(regional_weight, regional_warming_weight)) +
-  geom_point() +
-  facet_wrap(~region, scale = "free_y")
-
-ggplot(weights, aes(total_weight)) +
-  geom_histogram(fill = "grey", color = "black", bins = 20) +
-  facet_wrap(~region, scale = "free_x") # I think this looks reasonable
-
-extremes <- left_join(extremes, weights) %>%
+extremes <- left_join(extremes, regional_weights) %>%
   mutate(model_fac = as.factor(model))
 
 # get vector of regions
@@ -121,26 +116,26 @@ regions <- unique(extremes$region)
   
 ## brms: setup ---------------------------------------------
   
-form <-  bf(count | trials(N) + weights(total_weight, scale = TRUE) ~
+form <-  bf(count | trials(N) + weights(normalized_weight, scale = TRUE) ~
                 period + (1 | model_fac))
 
 
 # loop through each definition of extremes
 extreme.levels <- unique(extremes$extreme.level)
 
-# for(x in 1:length(extreme.levels)){
-check <- extremes %>%
-  filter(region == "North_Pacific", extreme.level == 4)
-
-
-View(check)
-
-x <- 1
+for(x in 1:length(extreme.levels)){
+# check <- extremes %>%
+#   filter(region == "North_Pacific", extreme.level == 4)
+# 
+# 
+# View(check)
+# 
+# x <- 1
 # loop through each region and fit model
 
-# for(i in 1:length(regions)){
+for(i in 1:length(regions)){
 
-    i <- 1
+    # i <- 1
 
 extremes_brms <- brm(form,
                  data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
@@ -152,14 +147,14 @@ extremes_brms <- brm(form,
   
 saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))
 
-# }
-# }
+}
+}
 
 ##
 
-x <- 2
+x <- 1
 
-i <- 3
+i <- 2
 
 extremes_brms <- brm(form,
                      data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
@@ -173,9 +168,9 @@ saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.l
 
 
 ##
-x <- 2
+x <- 1
 
-i <- 4
+i <- 3
 
 extremes_brms <- brm(form,
                      data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
@@ -204,19 +199,19 @@ saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.l
 
 # evaluate all six regional models
 
-i <- 1
+i <- 6
 x <- 1
 
 model <- readRDS(paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))
 
-check_hmc_diagnostics(model$fit) # N. Pac. SD4, GOA SD5, BC SD5, SCC SD5 increase tree_depth
-neff_lowest(model$fit) # N. Pac. SD4, GOA SD5, BC SD4, BC SD5, SSC SD5 are low
+check_hmc_diagnostics(model$fit) # GOA SD4, BCC SD4  increase tree_depth
+neff_lowest(model$fit) # GOA SD only ~100-200;   BC SD4 only 300-400
 rhat_highest(model$fit)
 summary(model)
 bayes_R2(model) 
 trace_plot(model$fit)
 
-# and plot all six
+## and plot all six
 
 new.dat <- data.frame(period = unique(extremes$period),
                       model = NA,
@@ -227,9 +222,9 @@ plot.dat <- data.frame()
 for(i in 1:length(regions)){
 # i <- 1
   
- for(j in 1:length(extreme.levels)){
-
-model <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_extremes_binomial.rds", sep = ""))
+ # for(j in 1:length(extreme.levels)){
+j <- 1 # only plotting SD = 4!
+model <- readRDS(paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[j], "SD_extremes_binomial.rds", sep = ""))
 
 probs <- posterior_epred(model, newdata = new.dat, re_formula = NA)/1000 # dive by N to get probability
 
@@ -242,7 +237,7 @@ plot.dat <- rbind(plot.dat,
                              upper = apply(probs, 2, quantile, probs = 0.975)))
 }
 
-}
+# }
 # calculate inverse to get expected return time
 plot.dat[,c(4:6)] <- 1/plot.dat[,c(4:6)]
 
@@ -267,14 +262,27 @@ plot.dat <- left_join(plot.dat, period.order) %>%
 
 
 # and change labels for facets!
-region_names <- c(
-  North_Pacific = "North Pacific",
-  Eastern_Bering_Sea = "Eastern Bering Sea",
-  Gulf_of_Alaska = "Gulf of Alaska",
-  British_Columbia_Coast = "British Columbia Coast",
-  Northern_California_Current = "Northern California Current",
-  Southern_California_Current = "Southern California Current"
-)
+region_names <- data.frame(region = unique(plot.dat$region),
+                           plot_names = c("Eastern Bering Sea",
+                                          "Gulf of Alaska",
+                                          "British Columbia Coast",
+                                          "Northern California Current",
+                                          "Southern California Current",
+                                          "North Pacific"),
+                           order = c(2,3,4,5,6,1))
+  
+plot.dat <- left_join(plot.dat, region_names)  
+
+plot.dat$plot_names <- reorder(plot.dat$plot_names, plot.dat$order)  
+
+# c(
+#   North_Pacific = "North Pacific",
+#   Eastern_Bering_Sea = "Eastern Bering Sea",
+#   Gulf_of_Alaska = "Gulf of Alaska",
+#   British_Columbia_Coast = "British Columbia Coast",
+#   Northern_California_Current = "Northern California Current",
+#   Southern_California_Current = "Southern California Current"
+# )
 
 
 # region_labeller <- function(variable,value){
@@ -282,11 +290,10 @@ region_names <- c(
 # }
 pos_dodge = position_dodge(width = 0.2)
 
-extremes.plot <- ggplot(plot.dat, aes(period, prob, color = as.factor(level))) +
+extremes.plot <- ggplot(plot.dat, aes(period, prob)) +
   geom_errorbar(aes(x = period, ymin = lower, ymax = upper), width = 0.3, position = pos_dodge) +
-  geom_point(size = 4, position = pos_dodge) +
-  scale_color_manual(values = cb[c(3,4)]) +
-  facet_wrap(~region, labeller = labeller(region = region_names)) +
+  geom_point(size = 4, position = pos_dodge, color = "red") +
+  facet_wrap(~plot_names) +
   scale_y_continuous(breaks=c(1,10,100,1000,10000),
                      labels = c("1", "10", "100", "1000", ">10,000"),
                      minor_breaks = c(2:9, 
