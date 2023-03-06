@@ -20,50 +20,15 @@ pdo <- pdo %>%
 
 
 
-  mutate(month = as.numeric(months(date)),
-         year = as.numeric(as.character(chron::years(date)))) %>%
-  select(-date)
-
-
-# pdo$year <- as.numeric(pdo$year)
-
 npgo <- read.csv("./CMIP6/data/npgo.csv")
 
-str(pdo)
-
-dat <- left_join(pdo, npgo) %>%
-  filter(year %in% 1950:2021) 
-
-
-plot.dat <- dat %>%
-  pivot_longer(cols = c(-month, -year)) %>%
-  mutate(dec.yr = year + (month - 0.5)/12)
-
-
-ggplot(plot.dat, aes(dec.yr, value, color = name)) +
-  geom_line()
-
-# # group by winter year
-# dat <- dat %>%
-#   filter(month %in% c(11,12,1:3)) %>%
-#   mutate(winter.year = if_else(month %in% 11:12, year + 1, year)) %>%
-#   filter(winter.year %in% 1951:2021) %>%
-#   group_by(winter.year) %>%
-#   summarise(pdo = mean(pdo),
-#             npgo = mean(npgo))
-# 
-# plot.dat <- dat %>%
-#   pivot_longer(cols = c(-winter.year)) 
-# 
-# ggplot(plot.dat, aes(winter.year, value, color = name)) +
-#   geom_line()
-
-# group by year
-
-dat <- dat %>% 
+npgo <- npgo %>%
+  filter(year %in% 1950:2021) %>% # 2022 not complete as of 3/6/23, use 1950-2021 only
   group_by(year) %>%
-  summarise(pdo = mean(pdo),
-            npgo = mean(npgo))
+  summarize(npgo = mean(npgo))
+
+
+dat <- left_join(pdo, npgo)
 
 ## load far values----------------
 
