@@ -172,9 +172,18 @@ plot.out <- left_join(plot.out, plot.order)
 
 plot.out$name <- reorder(plot.out$name, plot.out$order)
 
-ggplot(plot.out, aes(year, Correlation, color = region)) +
+# clean region names
+region.order <- data.frame(region = regions,
+                           region_plot = str_replace_all(regions, "_", " "),
+                           region_order = 1:5)
+
+plot.out <- left_join(plot.out, region.order)
+
+plot.out$region_plot <- reorder(plot.out$region_plot, plot.out$region_order)
+
+ggplot(plot.out, aes(year, Correlation, color = region_plot)) +
   geom_line() +
-  facet_wrap(~name, scale = "free_y") +
+  facet_wrap(~name) +
   scale_color_manual(values = cb[c(2:6)]) +
   theme(axis.title.x = element_blank(),
         legend.title = element_blank()) +
