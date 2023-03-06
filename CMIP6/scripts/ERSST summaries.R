@@ -78,9 +78,9 @@ scc.y <- c(41, 33, 33, 39, 41, 41)
 
 
 # plot to check
-png("./CMIP6/figs/study_site.png", width = 7, height = 6, units = 'in', res = 300)
+png("./CMIP6/figs/study_site.png", width = 5, height = 4.5, units = 'in', res = 300)
 
-par(las = 1)
+par(las = 1, cex = 0.8)
 
 temp.mean <- colMeans(SST, na.rm=T)
 z <- t(matrix(temp.mean,length(y)))
@@ -89,6 +89,8 @@ image.plot(x,y,z, col=oceColorsPalette(64), xlab = "°E Longitude", ylab = "°N 
 contour(x, y, z, add=T)
 map('world2Hires',c('Canada', 'usa', 'USSR', 'Japan', 'Mexico', 'South Korea', 'North Korea', 'China', 'Mongolia'), fill=T,add=T, lwd=1, col="lightyellow3")
 
+box()
+
 # plot regional polygons
 polygon(ebs.x, ebs.y, border = "red", lwd = 2)
 polygon(goa.x, goa.y, border = "red", lwd = 2)
@@ -96,13 +98,13 @@ polygon(bc.x, bc.y, border = "red", lwd = 2)
 polygon(ncc.x, ncc.y, border = "red", lwd = 2)
 polygon(scc.x, scc.y, border = "red", lwd = 2)
 
-text(x = 211, y = 63.5, "EBS", cex = 1.2)
-text(x = 237, y = 58.5, "GOA", cex = 1.2)
-text(x = 242, y = 52, "BCC", cex = 1.2)
-text(x = 245, y = 45, "NCC", cex = 1.2)
-text(x = 245, y = 39, "SCC", cex = 1.2)
+text(x = 211, y = 63.5, "EBS", cex = 0.6)
+text(x = 237, y = 58.5, "GOA", cex = 0.6)
+text(x = 242, y = 52, "BCC", cex = 0.6)
+text(x = 245, y = 45, "NCC", cex = 0.6)
+text(x = 245, y = 39, "SCC", cex = 0.6)
 
-mtext("A", cex = 1.8, side = 3, adj = -0.1, line = -1)
+mtext("A", cex = 1.4, side = 3, adj = -0.1, line = 1)
 dev.off()
 # those  areas look fine
 
