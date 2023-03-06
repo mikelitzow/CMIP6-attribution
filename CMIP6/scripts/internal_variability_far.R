@@ -39,9 +39,9 @@ regions <- regions[1:6,1]
 # load ERSST anomalies
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
-# limit to 1950:2021
+# limit to 1950:2022
 ersst.anom <- ersst.anom %>%
-  filter(year %in% 1950:2021)
+  filter(year %in% 1950:2022)
 
 far_pred_annual <- data.frame()
 
@@ -56,7 +56,7 @@ for(i in 2:length(regions)){ # loop through regions, excluding N. Pacific
     rename(annual.anomaly.1yr = annual.anomaly.unsmoothed)
   
   # load regional model
-  mod <- readRDS(paste("./CMIP6/brms_output/", regions[i], "_rolling_window_binomial2.rds", sep = ""))
+  mod <- readRDS(paste("./CMIP6/brms_output/", regions[i], "annual_sst_rolling_window_binomial2.rds", sep = ""))
   
   ## setup new data
   nd <- data.frame(period = c("historical", "preindustrial"),
@@ -102,11 +102,11 @@ regions <- unique(dat$region)
 
 output <- data.frame()
 
-for(i in 1969:2021){
+for(i in 1964:2022){
   # i <- 1964
   
   temp <- dat %>%
-    filter(year %in% (i-15):i)
+    filter(year %in% (i-14):i)
   
   for(j in 1:length(regions)){
    # j <- 1 
@@ -144,8 +144,8 @@ plot.out <- output %>%
   rename(PDO = pdo.cor,
          NPGO = npgo.cor)
 
-f.p <- function(x) cor.test(x,1969:2021, method="kendall")$p.value
-f.tau <- function(x) cor.test(x,1969:2021, method="kendall")$statistic
+f.p <- function(x) cor.test(x,1964:2022, method="kendall", na.action = "na.omit")$p.value
+f.tau <- function(x) cor.test(x,1964:2022, method="kendall", na.action = "na.omit")$statistic
 
 
 test <- plot.out %>%
@@ -155,7 +155,7 @@ test <- plot.out %>%
             NPGO_p = f.p(NPGO),
             NPGO_tau = f.tau(NPGO))
 
-test  # all of them are getting stonger!
+test  # all of them are getting stronger except GOA!
 
 # save test output
 write.csv(test, "./CMIP6/summaries/Kendalls_tau_PDO_NPGO_FAR.csv", row.names = F)
@@ -183,33 +183,12 @@ ggplot(plot.out, aes(year, Correlation, color = region)) +
 # and save 
 ggsave("./CMIP6/figs/internal_variability_far_correlations.png", width = 10, height = 3.5, units = 'in')
 
-## EBS and GOA - RR for 76/77 PDO event-----------------------
 
-# load RR 
-RR <- read.csv("./CMIP6/summaries/complete_FAR_RR_time_series_with_uncertainty.csv")
+ggplot(filter(plot.out, region == "Gulf_of_Alaska"), aes(year, Correlation, color = region)) +
+  geom_line() +
+  facet_wrap(~name, scale = "free_y") +
+  scale_color_manual(values = cb[c(2:6)]) +
+  theme(axis.title.x = element_blank(),
+        legend.title = element_blank()) +
+  geom_hline(lty = 2, yintercept = 0)
 
-# clean up 
-dat <- RR %>%
-  filter(region %in% c("Eastern_Bering_Sea", "Gulf_of_Alaska"),
-         window_plot == 'Annual SST', 
-         year %in% 1967:1986) %>%
-  select(region, year, FAR, RR)
-
-pdo <- read.csv("./CMIP6/data/pdo.csv")
-
-pdo <- pdo %>%
-  mutate(year = as.numeric(as.character(chron::years(date)))) %>%
-  group_by(year) %>%
-  summarize(PDO = mean(pdo))
-
-dat <- left_join(dat, pdo)
-
-ggplot(dat, aes(PDO, FAR)) +
-  geom_point() +
-  geom_smooth(method = "gam", se = F) +
-  facet_wrap(~region, scales = "free_y", ncol = 1)
-
-ggplot(dat, aes(PDO, RR)) +
-  geom_point() +
-  geom_smooth(method = "gam", se = F) +
-  facet_wrap(~region, scales = "free_y", ncol = 1)
