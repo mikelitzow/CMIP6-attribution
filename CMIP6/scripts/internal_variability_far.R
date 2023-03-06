@@ -12,6 +12,14 @@ cb <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E
 pdo <- read.csv("./CMIP6/data/pdo.csv")
 
 pdo <- pdo %>%
+  pivot_longer(cols = -Year) %>%
+  rename(year = Year) %>%
+  group_by(year) %>%
+  filter(year %in% 1950:2022) %>%
+  summarise(pdo = mean(value))
+
+
+
   mutate(month = as.numeric(months(date)),
          year = as.numeric(as.character(chron::years(date)))) %>%
   select(-date)
