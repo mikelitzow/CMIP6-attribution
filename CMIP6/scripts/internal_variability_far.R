@@ -144,9 +144,8 @@ plot.out <- output %>%
   rename(PDO = pdo.cor,
          NPGO = npgo.cor)
 
-f.p <- function(x) cor.test(x,1974:2022, method="kendall", na.action = "na.omit")$p.value
-f.tau <- function(x) cor.test(x,1974:2022, method="kendall", na.action = "na.omit")$statistic
-
+f.p <- function(x) cor.test(1974:2022, x, method="kendall", na.action = "na.omit")$p.value
+f.tau <- function(x) cor.test(1974:2022, x, method="kendall", na.action = "na.omit")$estimate
 
 test <- plot.out %>%
   group_by(region) %>%
