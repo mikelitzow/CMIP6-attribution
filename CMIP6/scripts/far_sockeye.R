@@ -10,8 +10,8 @@ source("./CMIP6/scripts/stan_utils.R")
 theme_set(theme_bw())
 
 ## Read in data --------------------------------------------
-# data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far.csv")
-data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far_no_south_peninsula.csv")
+data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far.csv")
+# data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far_no_south_peninsula.csv")
 
 # plot time series and experienced FAR
 ggplot(data, aes(annual_far_3, log_catch)) +
@@ -354,6 +354,7 @@ ersst.anom <- ersst.anom %>%
 ggplot(filter(ersst.anom, year %in% 1950:1999), aes(annual.anomaly.three.yr.running.mean)) +
   geom_density(fill = "grey")
 
+
 # sst anomaly threshold predicted to correspond with highest 5 FAR values (2017 value is threshold) = 2.075
 ersst.max <- 2.075
 
@@ -488,102 +489,10 @@ check <- extreme.outcomes %>%
 
 View(check)
 
-## fit brms model to estimate probabilities-----------
-
-# model weights for extreme events in different periods - 
-# product of regional weighting (based on ar(1), correlation, bias) and 
-# prediction of observed N. Pac. weighting
-
-# load CMIP6 model weights
-model.weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv") 
-
-# clean up model weights 
-model.weights <- model.weights %>%
-  filter(window == "annual",
-         region == "Gulf_of_Alaska") %>%
-  select(model, scaled.total.weight) 
 
 
 
-## brms: setup ---------------------------------------------
-
-form <-  bf(count | trials(N) + weights(total_weight, scale = TRUE) ~
-              period + (1 | model_fac))
-
-# fit model
-
-extremes_brms <- brm(form,
-                     data = extremes,
-                     family = binomial(link = "logit"),
-                     seed = 1234,
-                     cores = 4, chains = 4, iter = 12000,
-                     save_pars = save_pars(all = TRUE),
-                     control = list(adapt_delta = 0.9, max_treedepth = 14))
-
-saveRDS(extremes_brms, "./CMIP6/brms_output/extremes_binomial.rds")
-
-
-# evaluate 
-
-model <- readRDS("./CMIP6/brms_output/extremes_binomial.rds")
-
-check_hmc_diagnostics(model$fit)
-neff_lowest(model$fit) 
-rhat_highest(model$fit)
-summary(model)
-bayes_R2(model) 
-trace_plot(model$fit)
-
-# and plot
-new.dat <- data.frame(period = unique(extremes$period),
-                      model = NA,
-                      N = 1000) 
-
-plot.dat <- data.frame()
-
-probs <- posterior_epred(model, newdata = new.dat, re_formula = NA)/1000 # dive by N to get probability
-
-plot.dat <- rbind(plot.dat,
-                  data.frame(period = new.dat$period,
-                             prob = apply(probs, 2, median),
-                             lower = apply(probs, 2, quantile, probs = 0.025),
-                             upper = apply(probs, 2, quantile, probs = 0.975)))
-
-
-# calculate inverse to get expected return time
-plot.dat[,c(2:4)] <- 1/plot.dat[,c(2:4)]
-
-# and change values above 10^4 to 10^4
-
-change <- plot.dat[,c(2:4)] > 10^4
-
-plot.dat[,c(2:4)][change] <- 10^4
-
-# set periods in order
-period.order <- data.frame(period = unique(plot.dat$period),
-                           period.order = 1:5)
-
-plot.dat <- left_join(plot.dat, period.order) %>%
-  mutate(period = reorder(period, period.order))
-
-
-ggplot(plot.dat, aes(period, prob)) +
-  geom_errorbar(aes(x = period, ymin = lower, ymax = upper), width = 0.3) +
-  geom_point(color = "red", size = 4) +
-  scale_y_continuous(breaks=c( 1,2,5,10,20,50,100,200,500,1000,2000,5000),
-                     minor_breaks = c(2:9, 
-                                      seq(20, 90, by = 10),
-                                      seq(200, 900, by = 100),
-                                      seq(2000, 9000, by = 1000))) +
-  coord_trans(y = "pseudo_log") +
-  ylab("Expected return time (years)") + 
-  xlab("North Pacific warming") +
-  theme(axis.text.x = element_text(angle = 45,
-                                   hjust = 1))
-
-ggsave("./CMIP6/figs/sockeye_extreme_return_time.png", width = 3, height = 6, units = 'in')        
-
-## different approach - plot hindcast and projected pdfs for sst anomalies --------------------------
+### plot hindcast and projected pdfs for sst anomalies --------------------------
 # create df to catch outcomes for extreme runs
 anomaly.pdfs <- data.frame()
 
@@ -690,95 +599,17 @@ for(i in 1:length(models)){ # start i loop (models)
   
 } # close i loop (models)
 
-
-# model weights for anomalies in different periods - 
-# product of regional weighting (based on ar(1), correlation, bias) and 
-# prediction of observed N. Pac. weighting
-
 # load CMIP6 model weights
-model.weights <- read.csv("./CMIP6/summaries/CMIP6_model_weights_by_region_window.csv") 
+model.weights <- read.csv("./CMIP6/summaries/normalized_CMIP6_weights.csv") 
 
 # clean up model weights 
 model.weights <- model.weights %>%
-  filter(window == "annual",
-         region == "Gulf_of_Alaska") %>%
-  select(model, scaled.total.weight) 
-
-# calculate GOA-specific model warming weights (based on prediction of experienced warming)
-
-ersst <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv")
-
-ersst <- ersst %>%
-  select(year, annual.unsmoothed) %>%
-  mutate(model = "ersst")
-
-models <- read.csv("./CMIP6/summaries/CMIP6.sst.time.series.csv")
-
-# combine models and ersst observations into "data"
-data <- models %>% 
-  filter(experiment == "hist_ssp585",
-         region == "Gulf_of_Alaska",
-         year %in% 1850:2021) %>% # note that for regional warming we will calculate anomalies wrt 1950-1999 (beginning of trustworthy ERSST)
-  select(year, annual.unsmoothed, model)
-
-data <- rbind(data, ersst) 
-
-# calculate 1850:1949 climatology for each model and ersst
-climatology <- data %>%
-  filter(year %in% 1850:1949) %>%
-  group_by(model) %>%
-  summarize(climatology.mean = mean(annual.unsmoothed), climatology.sd = sd(annual.unsmoothed))
-
-# combine climatology and data, calculate anomalies
-data <- left_join(data, climatology) %>%
-  mutate(anomaly = (annual.unsmoothed - climatology.mean) / climatology.sd)
-
-# and pivot longer (ersst vs models)
-ersst <- data %>%
-  filter(model == "ersst") %>%
-  select(year, anomaly) %>%
-  rename(ersst.anomaly = anomaly)
-
-data <- data %>%
-  filter(model != "ersst") %>%
-  left_join(., ersst)
-
-# loop through and fit linear ersst - model regressions to get weights
-regional_warming_weights <- data.frame()
-
-models <- unique(data$model)
+  filter(region == "Gulf_of_Alaska") %>%
+  select(model, normalized_weight) 
 
 
-for(m in 1:length(models)){ # loop through models
-  # m <- 1
-  
-  temp.dat <- data %>%
-    filter(model == models[m],
-           year %in% 1972:2021)
-  
-  
-  mod <- lm(ersst.anomaly ~ anomaly, data = temp.dat)
-  
-  regional_warming_weights <- rbind(regional_warming_weights,
-                                    data.frame(model = models[m],
-                                               regional_warming_weight = 1 / abs(1-coefficients(mod)[2]))) # inverse of difference from 1!
-}
-
-
-
-
-weights <- left_join(model.weights, regional_warming_weights) %>%
-  mutate(total_weight = scaled.total.weight * regional_warming_weight)
-
-
-# plot to examine
-ggplot(weights, aes(scaled.total.weight, regional_warming_weight)) +
-  geom_point() 
-
-ggplot(weights, aes(total_weight)) +
-  geom_histogram(fill = "grey", color = "black", bins = 20) 
-
-anomaly.pdfs <- left_join(anomaly.pdfs, weights) 
+# join anomalies with model weights
+anomaly.pdfs <- left_join(anomaly.pdfs, model.weights) 
 
 
 # resample to weight models
@@ -790,10 +621,10 @@ for(i in 1:length(periods)){
   # i <- 1
 
   temp <- anomaly.pdfs[anomaly.pdfs$period == periods[i],]
-  
+  set.seed(999)
   resample.pdf <- rbind(resample.pdf,
                         data.frame(period = periods[i],
-                                   anomaly = sample(temp$anomaly, 1000, replace = T, prob = temp$total_weight)))
+                                   anomaly = sample(temp$anomaly, 500, replace = T, prob = temp$total_weight)))
   
   
   

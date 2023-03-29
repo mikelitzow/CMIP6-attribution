@@ -123,6 +123,6 @@ ggpubr::ggarrange(extremes.plot,
                                       heights = c(0.8, 0.2)),
                   ncol = 2,
                   widths = c(0.7, 0.3),
-                  labels = c("a", "b"))
+                  labels = c("A", "B"))
 
 dev.off()

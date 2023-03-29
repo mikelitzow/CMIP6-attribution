@@ -181,7 +181,7 @@ g <- ggplot(far_pred) +
   geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
   geom_line(aes(x = year, y = prob, color = window_plot), size = 0.25) +
   geom_ribbon(aes(x = year, ymin = lower, ymax = upper, fill = window_plot), alpha = 0.15) +
-  facet_wrap(~region_plot, scales = "free_y", ncol = 2) +
+  facet_wrap(~region_plot, ncol = 2) +
   ylab("Fraction of Attributable Risk") +
   theme(axis.title.x = element_blank(),
         legend.title = element_blank(),
@@ -190,7 +190,9 @@ g <- ggplot(far_pred) +
   scale_fill_manual(values = cb[c(2,6)]) +
   labs(tag = "B") +
   theme(plot.tag.position = c(0.03, 0.95),
-        plot.tag = element_text(size = 16))
+        plot.tag = element_text(size = 16)) +
+  scale_y_continuous(breaks = seq(-0.25, 1, 0.25)) +
+  coord_cartesian(ylim = c(-0.3, 1))
 
 print(g)
 

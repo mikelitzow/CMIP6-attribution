@@ -33,11 +33,6 @@ ersst <- ersst %>%
 
 models <- read.csv("./CMIP6/summaries/CMIP6.sst.time.series.csv")
 
-# combine models and ersst observations into "data"
-# data <- models %>% 
-#   filter(experiment == "hist_ssp585",
-#          year %in% 1950:2021) %>% # note that for regional warming we will calculate anomalies wrt 1950-1999 (beginning of trustworthy ERSST)
-#   select(region, year, annual.unsmoothed, model)
 
 data <- models %>% 
   filter(experiment == "hist_ssp585") %>%
@@ -66,47 +61,6 @@ data <- data %>%
   left_join(., ersst)
 
 
-# # loop through and fit linear ersst - model regressions to get weights
-# regional_warming_weights <- data.frame()
-# 
-# regions <- unique(data$region)
-# models <- unique(data$model)
-# 
-# for(r in 1:length(regions)){ # loop through regions
-#   # r <- 1
-#   
-#   for(m in 1:length(models)){ # loop through models
-#     # m <- 1
-#     
-#     temp.dat <- data %>%
-#       filter(region == regions[r],
-#              model == models[m],
-#              year %in% 1972:2021)
-#     
-#     
-#     mod <- lm(ersst.anomaly ~ anomaly, data = temp.dat)
-#     
-#     regional_warming_weights <- rbind(regional_warming_weights,
-#                                       data.frame(region = regions[r],
-#                                                  model = models[m],
-#                                                  regional_warming_weight = 1 / abs(1-coefficients(mod)[2]))) # inverse of difference from 1!
-#     }
-#   
-#   }
-# 
-# 
-# weights <- left_join(regional_weights, regional_warming_weights) %>%
-#   mutate(total_weight = regional_weight * regional_warming_weight)
-# 
-# 
-# # plot to examine
-# ggplot(weights, aes(regional_weight, regional_warming_weight)) +
-#   geom_point() +
-#   facet_wrap(~region, scale = "free_y")
-# 
-# ggplot(weights, aes(total_weight)) +
-#   geom_histogram(fill = "grey", color = "black", bins = 20) +
-#   facet_wrap(~region, scale = "free_x") # I think this looks reasonable
 
 extremes <- left_join(extremes, regional_weights) %>%
   mutate(model_fac = as.factor(model))
@@ -124,14 +78,7 @@ form <-  bf(count | trials(N) + weights(normalized_weight, scale = TRUE) ~
 extreme.levels <- unique(extremes$extreme.level)
 
 for(x in 1:length(extreme.levels)){
-# check <- extremes %>%
-#   filter(region == "North_Pacific", extreme.level == 4)
-# 
-# 
-# View(check)
-# 
-# x <- 1
-# loop through each region and fit model
+
 
 for(i in 1:length(regions)){
 
@@ -149,6 +96,18 @@ saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.l
 
 }
 }
+
+### aside - figure return time for 5.07 SD in EBS
+
+extremes_brms_EBS <- brm(form,
+                     data = extremes[extremes$region == regions[1] & extremes$extreme.level == extreme.levels[x],],
+                     family = binomial(link = "logit"),
+                     seed = 1299,
+                     cores = 4, chains = 4, iter = 15000,
+                     save_pars = save_pars(all = TRUE),
+                     control = list(adapt_delta = 0.9, max_treedepth = 16))
+
+
 
 ##
 
@@ -295,7 +254,12 @@ extremes.plot <- ggplot(plot.dat, aes(period, prob)) +
   geom_point(size = 4, position = pos_dodge, color = "red") +
   facet_wrap(~plot_names) +
   scale_y_continuous(breaks=c(1,10,100,1000,10000),
-                     labels = c("1", "10", "100", "1000", ">10,000"),
+                     labels = c(expression(10^0), 
+                                expression(10^1),
+                                expression(10^2),
+                                expression(10^3),
+                                expression(">"~10^4)),
+                     # labels = c("1", "10", "100", "1000", ">10,000"),
                      minor_breaks = c(2:9, 
                                       seq(20, 90, by = 10),
                                       seq(200, 900, by = 100),
