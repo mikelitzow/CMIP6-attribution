@@ -154,7 +154,7 @@ test <- plot.out %>%
             NPGO_p = f.p(NPGO),
             NPGO_tau = f.tau(NPGO))
 
-test  # all of them are getting stronger except GOA!
+test  # all of them are getting stronger 
 
 # save test output
 write.csv(test, "./CMIP6/summaries/Kendalls_tau_PDO_NPGO_FAR.csv", row.names = F)
@@ -176,17 +176,21 @@ region.order <- data.frame(region = regions,
                            region_plot = str_replace_all(regions, "_", " "),
                            region_order = 1:5)
 
+region.order$region_plot[c(1,3:5)] <- c("E. Bering Sea", "B.C. Coast", "N. Cal. Current", "S. Cal. Current")
+
 plot.out <- left_join(plot.out, region.order)
 
 plot.out$region_plot <- reorder(plot.out$region_plot, plot.out$region_order)
 
 ggplot(plot.out, aes(year, Correlation, color = region_plot)) +
   geom_line() +
-  facet_wrap(~name) +
+  facet_wrap(~name, ncol = 1, scales = "free_y") +
   scale_color_manual(values = cb[c(2:6)]) +
   theme(axis.title.x = element_blank(),
-        legend.title = element_blank()) +
-  geom_hline(lty = 2, yintercept = 0)
+        legend.title = element_blank(),
+        legend.position = "top") +
+  geom_hline(lty = 2, yintercept = 0) +
+  guides(color = guide_legend(ncol = 3))
 
 # and save 
-ggsave("./CMIP6/figs/internal_variability_far_correlations.png", width = 10, height = 3.5, units = 'in')
+ggsave("./CMIP6/figs/internal_variability_far_correlations.png", width = 4, height = 5.5, units = 'in')
