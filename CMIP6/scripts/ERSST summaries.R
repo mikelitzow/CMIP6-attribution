@@ -104,7 +104,7 @@ text(x = 242, y = 52, "BCC", cex = 0.6)
 text(x = 245, y = 45, "NCC", cex = 0.6)
 text(x = 245, y = 39, "SCC", cex = 0.6)
 
-mtext("A", cex = 1.4, side = 3, adj = -0.1, line = 1)
+
 dev.off()
 # those  areas look fine
 
