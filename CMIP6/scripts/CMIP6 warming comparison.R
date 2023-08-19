@@ -450,6 +450,9 @@ for(m in 1:length(models)){
                           UCI = ce1s_1$warming$upper__[choose],
                           LCI = ce1s_1$warming$lower__[choose]))
 }
+
+# save
+write.csv(warming.timing, "./CMIP6/summaries/CMIP6_brms_warming_timing_ssp585.csv", row.names = F)
 ## warming model weights ----------------------------------
 # evaluate ability of different models to predict warming for 1973-2022
 
