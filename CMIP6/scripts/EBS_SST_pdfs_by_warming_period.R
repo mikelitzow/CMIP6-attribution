@@ -10,7 +10,7 @@ cb <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E
 ## different approach - plot hindcast and projected pdfs for sst anomalies --------------------------
 
 # load ersst anomalies
-ersst.anom <- read.csv("./data/regional_north_pacific_ersst_anomaly_time_series.csv")
+ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
 
 unique(ersst.anom$region)
 
@@ -21,14 +21,14 @@ ersst.anom <- ersst.anom %>%
 ggplot(filter(ersst.anom, year %in% 1950:1999), aes(annual.anomaly.three.yr.running.mean)) +
   geom_density(fill = "grey")
 
-# sst anomaly threshold predicted to correspond with highest 5 FAR values (2017 value is threshold) = 2.075
+# sst anomaly threshold predicted to correspond with highest 3 FAR values = 4
 ersst.max <- 4
 
 # load CMIP6 anomalies
-cmip.anom <- read.csv("./data/CMIP6.anomaly.time.series.csv")
+cmip.anom <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv")
 
 # load estimated warming level timing for each model
-timing <- read.csv("./data/model.north.pacific.warming.timing.csv")
+timing <- read.csv("./CMIP6/summaries/model.north.pacific.warming.timing.csv")
 
 # get vector of model names
 models <- unique(cmip.anom$model)
