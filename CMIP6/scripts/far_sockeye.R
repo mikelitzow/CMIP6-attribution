@@ -9,20 +9,12 @@ source("./CMIP6/scripts/stan_utils.R")
 
 theme_set(theme_bw())
 
-## Read in data --------------------------------------------
+## Read in far data --------------------------------------------
 data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far.csv")
 # data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far_no_south_peninsula.csv")
 
 # plot time series and experienced FAR
 ggplot(data, aes(annual_far_3, log_catch)) +
-  geom_point()
-
-# add RR
-data <- data %>%
-  mutate(RR = 1 / (1-annual_far_3),
-         log_RR = log(RR, 10))
-
-ggplot(data, aes(log_RR, log_catch)) +
   geom_point()
 
 plot.dat <- data %>%
