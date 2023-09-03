@@ -1,21 +1,157 @@
-## FAR-catch relationships for GOA sockeye
+## SST-catch and FAR-catch relationships for GOA sockeye
 
 library(tidyverse)
 library(mgcv)
 library(rstan)
 library(brms)
 library(bayesplot)
+library(tidybayes)
+
+# set palette for plotting
+cb <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 source("./CMIP6/scripts/stan_utils.R")
 
 theme_set(theme_bw())
 
-## Read in far data --------------------------------------------
-data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far.csv")
-# data <- read.csv("./CMIP6/data/GOA_sockeye_catch_far_no_south_peninsula.csv")
+## Read in far,sst, and catch data --------------------------------------------
+data <- read.csv("./CMIP6/data/GOA_sockeye_catch_sst_far_no_s.peninsula.csv")
+
+
+## Analyze sst-catch relationship ---------------------------------------------
+
+# plot time series and experienced sst
+ggplot(data, aes(annual_sst_3, log_catch)) +
+  geom_point()
+
+# fit brms model
+sst_catch_formula <- bf(log_catch_stnd ~ s(annual_sst_3) +  year)
+
+sst_catch_brm <- brm(sst_catch_formula,
+                      data = data,
+                      cores = 4, chains = 4, iter = 2000,
+                      save_pars = save_pars(all = TRUE),
+                      control = list(adapt_delta = 0.999, max_treedepth = 10))
+
+
+saveRDS(sst_catch_brm, file = "./CMIP6/brms_output/sst_catch.rds")
+
+sst_catch_brm <- readRDS("./CMIP6/brms_output/sst_catch.rds")
+check_hmc_diagnostics(sst_catch_brm$fit)
+neff_lowest(sst_catch_brm$fit)
+rhat_highest(sst_catch_brm$fit)
+summary(sst_catch_brm)
+bayes_R2(sst_catch_brm)
+
+conditional_effects(sst_catch_brm)
+
+y <- data$log_catch_stnd
+yrep_sst_catch_brm  <- fitted(sst_catch_brm, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_sst_catch_brm[sample(nrow(yrep_sst_catch_brm), 25), ]) +
+  xlim(-6, 6) 
+
+trace_plot(sst_catch_brm$fit)
+
+
+
+##############
 
 # plot time series and experienced FAR
 ggplot(data, aes(annual_far_3, log_catch)) +
   geom_point()
+
+
+# fit brms model
+far_catch_formula <- bf(log_catch_stnd ~ s(annual_far_3) + year)
+
+far_catch_brm <- brm(far_catch_formula,
+                     data = data,
+                     cores = 4, chains = 4, iter = 2000,
+                     save_pars = save_pars(all = TRUE),
+                     control = list(adapt_delta = 0.999, max_treedepth = 10))
+
+
+saveRDS(far_catch_brm, file = "./CMIP6/brms_output/far_catch.rds")
+
+far_catch_brm <- readRDS("./CMIP6/brms_output/far_catch.rds")
+check_hmc_diagnostics(far_catch_brm$fit)
+neff_lowest(far_catch_brm$fit)
+rhat_highest(far_catch_brm$fit)
+summary(far_catch_brm)
+bayes_R2(far_catch_brm)
+
+conditional_effects(far_catch_brm)
+
+y <- data$log_catch_stnd
+yrep_far_catch_brm  <- fitted(far_catch_brm, scale = "response", summary = FALSE)
+ppc_dens_overlay(y = y, yrep = yrep_far_catch_brm[sample(nrow(yrep_far_catch_brm), 25), ]) +
+  xlim(-6, 6) 
+
+trace_plot(far_catch_brm$fit)
+
+
+## plot far and sst brms models -----------------------
+
+## first, sst
+## 95% CI
+ce1s_1 <- conditional_effects(sst_catch_brm, effect = "annual_sst_3", re_formula = NA,
+                              probs = c(0.025, 0.975))
+## 90% CI
+ce1s_2 <- conditional_effects(sst_catch_brm, effect = "annual_sst_3", re_formula = NA,
+                              probs = c(0.05, 0.95))
+## 80% CI
+ce1s_3 <- conditional_effects(sst_catch_brm, effect = "annual_sst_3", re_formula = NA,
+                              probs = c(0.1, 0.9))
+dat_ce <- ce1s_1$annual_sst_3
+dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
+dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
+dat_ce[["upper_90"]] <- ce1s_2$annual_sst_3[["upper__"]]
+dat_ce[["lower_90"]] <- ce1s_2$annual_sst_3[["lower__"]]
+dat_ce[["upper_80"]] <- ce1s_3$annual_sst_3[["upper__"]]
+dat_ce[["lower_80"]] <- ce1s_3$annual_sst_3[["lower__"]]
+
+sst.plot <- ggplot(dat_ce) +
+  aes(x = effect1__, y = estimate__) +
+  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+  geom_line(size = 1, color = "red3") +
+  labs(x = "Sea surface temperature (°C)", y = "Log catch anomaly", tag = "A") +
+  geom_text(data=data, aes(annual_sst_3, log_catch_stnd, label = year), size=2.5) + ## TODO is this right?
+  theme_bw()
+
+sst.plot
+
+## plot far
+## 95% CI
+ce1s_1 <- conditional_effects(far_catch_brm, effect = "annual_far_3", re_formula = NA,
+                              probs = c(0.025, 0.975))
+## 90% CI
+ce1s_2 <- conditional_effects(far_catch_brm, effect = "annual_far_3", re_formula = NA,
+                              probs = c(0.05, 0.95))
+## 80% CI
+ce1s_3 <- conditional_effects(far_catch_brm, effect = "annual_far_3", re_formula = NA,
+                              probs = c(0.1, 0.9))
+dat_ce <- ce1s_1$annual_far_3
+dat_ce[["upper_95"]] <- dat_ce[["upper__"]]
+dat_ce[["lower_95"]] <- dat_ce[["lower__"]]
+dat_ce[["upper_90"]] <- ce1s_2$annual_far_3[["upper__"]]
+dat_ce[["lower_90"]] <- ce1s_2$annual_far_3[["lower__"]]
+dat_ce[["upper_80"]] <- ce1s_3$annual_far_3[["upper__"]]
+dat_ce[["lower_80"]] <- ce1s_3$annual_far_3[["lower__"]]
+
+far.plot <- ggplot(dat_ce) +
+  aes(x = effect1__, y = estimate__) +
+  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), fill = "grey90") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
+  geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
+  geom_line(size = 1, color = "red3") +
+  labs(x = "Fraction of attributable risk", y = "Log catch anomaly", tag = "B") +
+  geom_text(data=data, aes(annual_far_3, log_catch_stnd, label = year), size=2.5) + ## TODO is this right?
+  theme_bw()
+
+far.plot
+
 
 plot.dat <- data %>%
   select(year, annual_far_3, log_catch) %>%
@@ -201,8 +337,8 @@ dat_ce[["upper_90"]] <- ce1s_2$annual_far_3[["upper__"]]
 dat_ce[["lower_90"]] <- ce1s_2$annual_far_3[["lower__"]]
 dat_ce[["upper_80"]] <- ce1s_3$annual_far_3[["upper__"]]
 dat_ce[["lower_80"]] <- ce1s_3$annual_far_3[["lower__"]]
-dat_ce[["rug.anom"]] <- c(jitter(unique(data$annual_far_3), amount = 0.0051),
-                          rep(NA, 100-length(unique(data$annual_far_3))))
+# dat_ce[["rug.anom"]] <- c(jitter(unique(data$annual_far_3), amount = 0.0051),
+                          # rep(NA, 100-length(unique(data$annual_far_3))))
 
 
 g2 <- ggplot(dat_ce) +
@@ -213,8 +349,12 @@ g2 <- ggplot(dat_ce) +
   geom_line(size = 1.5, color = "red3") +
   labs(x = "Fraction of Attributable Risk", y = "log(catch)") +
   theme_bw() +
-  geom_point(data = data, aes(x = annual_far_3, y = log_catch_stnd), color = "grey40") +
-  geom_hline(yintercept = 0, lty = 2) +
+  geom_text(data=data, aes(annual_far_3, log_catch_stnd, label = year), size=2.5) +
+  geom_hline(yintercept = 0, lty = 2) 
+  
+
+
++
   geom_rug(aes(x=rug.anom, y=NULL)) 
 
 print(g2)
@@ -253,7 +393,7 @@ priors <- c(set_prior("student_t(3, 0, 3)", class = "Intercept"),
 sockeye_model3 <- brm(sockeye_form3,
                       data = data,
                       prior = priors,
-                      cores = 4, chains = 4, iter = 3000,
+                      cores = 4, chains = 4, iter = 2000,
                       save_pars = save_pars(all = TRUE),
                       control = list(adapt_delta = 0.999, max_treedepth = 10))
 
@@ -305,6 +445,27 @@ g3 <- ggplot(plot, aes(far_fac, estimate__)) +
 print(g3)
 
 ggsave("./CMIP6/figs/FAR_sockeye_categorical.png", width=1.5, height=2, units='in')
+
+
+# plot posterior distributions
+
+posteriors <- as.data.frame(posterior_epred(sockeye_model3))
+
+names(posteriors) <- data$far_fac
+
+posteriors <- posteriors %>%
+  pivot_longer(everything(), names_to = "FAR", values_to = "Catch")
+
+  
+categorical.plot <- ggplot(posteriors, aes(Catch, fill = FAR)) +
+  geom_density(color = NA,  alpha = 0.7) +
+  scale_fill_manual(values = cb[c(8,4)], labels = c("\u2265 0.98", "< 0.91")) +
+  labs(x = "Log catch anomaly", y = "Density", tag = "C") +
+  theme(legend.position = c(0.2, 0.8)) +
+  geom_hline(yintercept  = 0)
+
+categorical.plot
+
 
 # alternate plot for stakeholders
 mu <- 16.19
