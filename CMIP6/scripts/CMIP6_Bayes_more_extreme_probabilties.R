@@ -73,29 +73,22 @@ regions <- unique(extremes$region)
 form <-  bf(count | trials(N) + weights(normalized_weight, scale = TRUE) ~
                 period + (1 | model_fac))
 
-
-# loop through each definition of extremes
-extreme.levels <- unique(extremes$extreme.level)
-
-for(x in 1:length(extreme.levels)){
-
-
 for(i in 1:length(regions)){
 
     # i <- 1
 
 extremes_brms <- brm(form,
-                 data = extremes[extremes$region == regions[i] & extremes$extreme.level == extreme.levels[x],],
+                 data = extremes[extremes$region == regions[i],],
                  family = binomial(link = "logit"),
                  seed = 1299,
                  cores = 4, chains = 4, iter = 15000,
                  save_pars = save_pars(all = TRUE),
                  control = list(adapt_delta = 0.9, max_treedepth = 16))
   
-saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[x], "SD_extremes_binomial.rds", sep = ""))
+saveRDS(extremes_brms, paste("./CMIP6/brms_output/",  regions[i], "_", "observed_extremes_binomial.rds", sep = ""))
 
 }
-}
+
 
 ### aside - figure return time for 5.07 SD in EBS
 
