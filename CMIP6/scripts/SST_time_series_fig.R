@@ -111,6 +111,9 @@ ersst_climatology <- ersst %>%
   summarize(pre_1950_mean_temp = mean(SST),
             pre_1950_sd_temp = sd(SST))
 
+ersst_mean_anomaly <- left_join(ersst, ersst_climatology) %>%
+  mutate(anomaly = SST - pre_1950_mean_temp)
+
 ersst_plot <- ersst_mean_anomaly %>%
   rename(weighted_mean = anomaly)  %>%
   mutate(group = "ERSST",
@@ -152,11 +155,19 @@ g2 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)
   facet_wrap(~region, scales = "free_y") +
   scale_color_manual(values = c(cb[c(2,1,7)], "black")) +
   scale_fill_manual(values = c(cb[c(2,1,7)], NA)) +
-  theme(legend.title = element_blank()) +
+  theme(legend.title = element_blank(),
+        axis.title.x = element_blank()) +
+  labs(y = "SST anomaly (°C)")
+
++
   guides(fill = guide_legend(override.aes = list(fill = cb[c(2,1,7)], NA ) ) )
   
 
 g2
+
+
+ggsave("./CMIP6/figs/SST_time_series.png", width = 10, height = 5)
+
 
 g2 +
   geom_line(data = ersst_mean_anomaly, aes(year, anomaly), color = "black", size = 0.5) +
@@ -172,11 +183,12 @@ g3 <- ggplot(projection_plot, aes(year, weighted_mean, color = group, fill = gro
   geom_ribbon(aes(ymin = weighted_mean - 2*weighted_sd,
                   ymax = weighted_mean + 2*weighted_sd),
               alpha = 0.2, color = NA) +
-  facet_wrap(~region, scales = "free_y") 
+  facet_wrap(~region, scales = "free_y") + 
+  geom_line(data = ersst_mean_anomaly, aes(year, anomaly), color = "black", size = 0.5)
 
 g3
 
 g3 +
   geom_line(data = ersst_mean_anomaly, aes(year, anomaly), color = "black", size = 0.5) +
-  geom_ribbon(data = ersst_mean_anomaly, aes(ymin = ymin, ymax = ymax))
+  # geom_ribbon(data = ersst_mean_anomaly, aes(ymin = ymin, ymax = ymax))
   theme(legend.position = "none")
