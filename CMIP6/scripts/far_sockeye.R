@@ -147,7 +147,7 @@ far.plot <- ggplot(dat_ce) +
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
   geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
   geom_line(size = 1, color = "red3") +
-  labs(x = "Fraction of attributable risk", y = "Log catch anomaly", tag = "B") +
+  labs(x = "Fraction of Attributable Risk", y = "Log catch anomaly", tag = "B") +
   geom_text(data=data, aes(annual_far_3, log_catch_stnd, label = year), size=2.5) + ## TODO is this right?
   theme_bw()
 
@@ -385,7 +385,7 @@ posteriors <- posteriors %>%
 
 categorical.plot <- ggplot(posteriors, aes(Catch, fill = FAR)) +
   geom_density(color = NA,  alpha = 0.7) +
-  scale_fill_manual(values = cb[c(8,4)], labels = c("\u2265 0.98", "< 0.91")) +
+  scale_fill_manual(values = cb[c(8,4)], labels = c("\u2265 0.98", "\u2264 0.91")) +
   labs(x = "Log catch anomaly", y = "Density", tag = "C") +
   theme(legend.position = c(0.2, 0.75)) +
   geom_hline(yintercept  = 0)
