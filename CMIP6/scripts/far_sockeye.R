@@ -383,7 +383,6 @@ names(posteriors) <- data$far_fac
 posteriors <- posteriors %>%
   pivot_longer(everything(), names_to = "FAR", values_to = "Catch")
 
-  
 categorical.plot <- ggplot(posteriors, aes(Catch, fill = FAR)) +
   geom_density(color = NA,  alpha = 0.7) +
   scale_fill_manual(values = cb[c(8,4)], labels = c("\u2265 0.98", "< 0.91")) +
@@ -392,28 +391,6 @@ categorical.plot <- ggplot(posteriors, aes(Catch, fill = FAR)) +
   geom_hline(yintercept  = 0)
 
 categorical.plot
-
-
-# alternate plot for stakeholders
-mu <- 16.19
-sd <- 0.345
-
-
-alt_g3 <- ggplot(plot, aes(far_fac, estimate__)) +
-  geom_point(size=3) +
-  geom_errorbar(aes(ymin=lower__, ymax=upper__), width=0.3, size=0.5) +
-  ylab("Millions of fish") +
-  xlab("% of human risk") +
-  scale_y_continuous(breaks = c(0, -1, -2),
-                     labels = c(round(exp(mu)/1e6, 1),
-                                round(exp(mu-sd)/1e6, 1),
-                                round(exp(mu-2*sd)/1e6, 1))) +
-scale_x_discrete(labels=c("< 91%", "> 98%")) +
-  theme_bw() 
-
-print(alt_g3)
-
-ggsave("./CMIP6/figs/alt_FAR_sockeye_categorical.png", width=3, height=2.5, units='in')
 
 
 ## expected return time ----------------------------------------
