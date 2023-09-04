@@ -174,15 +174,12 @@ plot.dat <- data.frame()
 for(i in 1:length(regions)){
 # i <- 1
   
- # for(j in 1:length(extreme.levels)){
-j <- 1 # only plotting SD = 4!
-model <- readRDS(paste("./CMIP6/brms_output/",  regions[i], "_", extreme.levels[j], "SD_extremes_binomial.rds", sep = ""))
+model <- readRDS(paste("./CMIP6/brms_output/",  regions[i], "_", "extremes_binomial.rds", sep = ""))
 
 probs <- posterior_epred(model, newdata = new.dat, re_formula = NA)/1000 # dive by N to get probability
 
 plot.dat <- rbind(plot.dat,
                   data.frame(region = regions[i],
-                             level = extreme.levels[j],
                              period = new.dat$period,
                              prob = apply(probs, 2, median),
                              lower = apply(probs, 2, quantile, probs = 0.025),
@@ -191,13 +188,13 @@ plot.dat <- rbind(plot.dat,
 
 # }
 # calculate inverse to get expected return time
-plot.dat[,c(4:6)] <- 1/plot.dat[,c(4:6)]
+plot.dat[,c(3:5)] <- 1/plot.dat[,c(3:5)]
 
 # and change values above 10^4 to 10^4
 
-change <- plot.dat[,c(4:6)] > 10^4
+change <- plot.dat[,c(3:5)] > 10^4
 
-plot.dat[,c(4:6)][change] <- 10^4
+plot.dat[,c(3:5)][change] <- 10^4
 
 # set regions and periods in order
 region.order <- data.frame(region = regions,
