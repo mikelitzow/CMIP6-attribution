@@ -117,7 +117,7 @@ sst.plot <- ggplot(dat_ce) +
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
   geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
   geom_line(size = 1, color = "red3") +
-  labs(x = "Sea surface temperature anomaly", y = "Log catch anomaly", tag = "A") +
+  labs(x = "SST (normalized anomaly)", y = "Log catch anomaly", tag = "A") +
   geom_text(data=data, aes(annual_sst_3, log_catch_stnd, label = year), size=2.5) + ## TODO is this right?
   theme_bw()
 
@@ -387,17 +387,13 @@ categorical.plot <- ggplot(posteriors, aes(Catch, fill = FAR)) +
   geom_density(color = NA,  alpha = 0.7) +
   scale_fill_manual(values = cb[c(8,4)], labels = c("\u2265 0.98", "< 0.91")) +
   labs(x = "Log catch anomaly", y = "Density", tag = "C") +
-  theme(legend.position = c(0.2, 0.8)) +
+  theme(legend.position = c(0.2, 0.75)) +
   geom_hline(yintercept  = 0)
 
 categorical.plot
 
 
 ## expected return time ----------------------------------------
-
-
-
-
 
 # load ersst anomalies
 ersst.anom <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_anomaly_time_series.csv")
@@ -547,8 +543,6 @@ check <- extreme.outcomes %>%
 View(check)
 
 
-
-
 ### plot hindcast and projected pdfs for sst anomalies --------------------------
 # create df to catch outcomes for extreme runs
 anomaly.pdfs <- data.frame()
@@ -692,7 +686,6 @@ plot.order <- data.frame(period = unique(resample.pdf$period),
                          order = 1:5)
 
 
-
 resample.pdf <- left_join(resample.pdf, plot.order) %>%
   mutate(period =  reorder(period, order))
 
@@ -717,7 +710,7 @@ pdf_plot <- ggplot(resample.pdf, aes(plot_period, anomaly)) +
   geom_violin(fill = cb[6], lty = 0, alpha = 0.5) +
   coord_flip() +
   xlab("North Pacific warming") +
-  ylab("SST anomaly (Std. Dev.)") +
+  ylab("SST (normalized anomaly)") +
   geom_hline(yintercept = ersst.max, lty = 2) +
   labs(tag = "D")
 
@@ -738,9 +731,9 @@ ggsave("./CMIP6/figs/sockeye_anomaly_pdfs.png", width = 3, height = 3, units = '
 
 void_plot <- ggplot() + theme_void()
 
-png("./CMIP6/figs/combined_sockeye_FAR_plot.png", width = 9, height = 7, units = 'in', res = 300)
+png("./CMIP6/figs/combined_sockeye_FAR_plot.png", width = 8, height = 8, units = 'in', res = 300)
 
-ggpubr::ggarrange(ggpubr::ggarrange(far_plot,  catch_plot, ggpubr::ggarrange(void_plot, g3, ncol = 2, widths = c(0.3, 0.7)), ncol = 1),
+ggpubr::ggarrange(ggpubr::ggarrange(sst.plot, far.plot,  categorical.plot, ncol = 1),
 pdf_plot, ncol = 2, widths = c(0.45, 0.55))
 
 dev.off()
