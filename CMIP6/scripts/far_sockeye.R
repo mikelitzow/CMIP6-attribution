@@ -29,6 +29,7 @@ sst_catch_formula <- bf(log_catch_stnd ~ s(annual_sst_3) +  year)
 
 sst_catch_brm <- brm(sst_catch_formula,
                       data = data,
+                     seed = 989,
                       cores = 4, chains = 4, iter = 2000,
                       save_pars = save_pars(all = TRUE),
                       control = list(adapt_delta = 0.999, max_treedepth = 10))
@@ -116,7 +117,7 @@ sst.plot <- ggplot(dat_ce) +
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), fill = "grey85") +
   geom_ribbon(aes(ymin = lower_80, ymax = upper_80), fill = "grey80") +
   geom_line(size = 1, color = "red3") +
-  labs(x = "Sea surface temperature (°C)", y = "Log catch anomaly", tag = "A") +
+  labs(x = "Sea surface temperature anomaly", y = "Log catch anomaly", tag = "A") +
   geom_text(data=data, aes(annual_sst_3, log_catch_stnd, label = year), size=2.5) + ## TODO is this right?
   theme_bw()
 
