@@ -156,6 +156,7 @@ g2 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)
   scale_color_manual(values = c(cb[c(2,1,7)], "black")) +
   scale_fill_manual(values = c(cb[c(2,1,7)], NA)) +
   theme(legend.title = element_blank(),
+        legend.position = "top",
         axis.title.x = element_blank()) +
   labs(y = "SST anomaly (°C)")
 
@@ -163,4 +164,4 @@ g2 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)
 g2
 
 
-ggsave("./CMIP6/figs/SST_time_series.png", width = 10, height = 5)
+ggsave("./CMIP6/figs/SST_time_series.png", width = 9, height = 5)
