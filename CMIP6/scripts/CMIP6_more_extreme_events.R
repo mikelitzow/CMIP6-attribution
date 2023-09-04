@@ -19,10 +19,8 @@ ersst.max <- ersst.anom %>%
   group_by(region) %>%
   summarise(max.anomaly = max(annual.anomaly.unsmoothed)) 
 
-
-# and define the mean maximum observed across all six time series
-mean.max <- round(mean(ersst.max$max.anomaly), 1) # 4.04, rounding to 4 SD
-
+# and save
+write.csv(ersst.max, "./CMIP6/summaries/most_extreme_observed_annual_anomalies.csv", row.names = F)
 
 # load CMIP6 anomalies
 cmip.anom <- read.csv("./CMIP6/summaries/CMIP6.anomaly.time.series.csv")
@@ -46,12 +44,6 @@ regions <- unique(cmip.anom$region)
 # create df to catch outcomes for extreme runs
 extreme.outcomes <- data.frame()
 
-# loop through two extreme levels - SD = 4 and SD = 5
-
-extreme.sd <- c(4, 5)
-
-for(x in 1:length(extreme.sd)) { # start x loop (extremes)
-  # x <- 1
 # loop through each model
 for(i in 1:length(models)){ # start i loop (models)
   # i <- 1
@@ -64,24 +56,23 @@ for(i in 1:length(models)){ # start i loop (models)
     pre.temp <- cmip.anom %>% 
       filter(experiment == "piControl",
              model == models[i],
-             region == regions[j])
+             region == regions[j]) %>%
+      left_join(.,ersst.max)
     
       
     # record how many model years are more extreme
     extreme.outcomes <- rbind(extreme.outcomes,
-                                    data.frame(extreme.level = extreme.sd[x],
-                                    model = models[i],
+                                    data.frame(model = models[i],
                                     region = regions[j],
                                     period = "preindustrial",
-                                    count = sum(pre.temp$annual.unsmoothed >= extreme.sd[x], na.rm = T),
+                                    count = sum(pre.temp$annual.unsmoothed >= pre.temp$max.anomaly, na.rm = T),
                                     N = length(!is.na(pre.temp$annual.unsmoothed))))
  
     
     } # close j loop (regions)
   
   } # close i loop (models)
-  
-} # close x loop (extreme level)
+
 
 
 head(extreme.outcomes) 
@@ -100,13 +91,9 @@ checkGOA
 # find positive occurences
 filter(extreme.outcomes, count > 0)
 
-# two CCE occurrences of 4SD 
 
 ## record outcomes using different warming levels from hist.585 ----------------
 
-# loop through two extreme levels - SD = 4 and SD = 5
-for(x in 1:length(extreme.sd)) { # start x loop (extremes)
-  # x <- 1
 # loop through each model
 for(i in 1:length(models)){ # start i loop (models)
   # i <- 1
@@ -119,7 +106,8 @@ for(i in 1:length(models)){ # start i loop (models)
   hist.temp <- cmip.anom %>% 
       filter(experiment == "hist_ssp585",
              model == models[i],
-             region == regions[j])
+             region == regions[j]) %>%
+    left_join(.,ersst.max)
   
   # # separate this region from ersst.max
   # ersst.temp <- ersst.max %>%
@@ -135,11 +123,10 @@ for(i in 1:length(models)){ # start i loop (models)
 
   # record how many model years are more extreme
   extreme.outcomes <- rbind(extreme.outcomes,
-                            data.frame(extreme.level = extreme.sd[x],
-                                       model = models[i],
+                            data.frame(model = models[i],
                                        region = regions[j],
                                        period = "1950_to_0.5",
-                                       count = sum(hist.temp.use$annual.unsmoothed >= extreme.sd[x], na.rm = T),
+                                       count = sum(hist.temp.use$annual.unsmoothed >= hist.temp.use$max.anomaly, na.rm = T),
                                        N = length(!is.na(hist.temp.use$annual.unsmoothed))))
   
   ## pull 0.5 - 1.0 degrees warming
@@ -152,11 +139,10 @@ for(i in 1:length(models)){ # start i loop (models)
   
   # record how many model years are more extreme
   extreme.outcomes <- rbind(extreme.outcomes,
-                            data.frame(extreme.level = extreme.sd[x],
-                                       model = models[i],
+                            data.frame(model = models[i],
                                        region = regions[j],
                                        period = "0.5_to_1.0",
-                                       count = sum(hist.temp.use$annual.unsmoothed >= extreme.sd[x], na.rm = T),
+                                       count = sum(hist.temp.use$annual.unsmoothed >= hist.temp.use$max.anomaly, na.rm = T),
                                        N = length(!is.na(hist.temp.use$annual.unsmoothed))))
   
   ## pull 1.0 - 1.5 degrees warming
@@ -169,11 +155,10 @@ for(i in 1:length(models)){ # start i loop (models)
   
   # record how many model years are more extreme
   extreme.outcomes <- rbind(extreme.outcomes,
-                            data.frame(extreme.level = extreme.sd[x],
-                                       model = models[i],
+                            data.frame(model = models[i],
                                        region = regions[j],
                                        period = "1.0_to_1.5",
-                                       count = sum(hist.temp.use$annual.unsmoothed >= extreme.sd[x], na.rm = T),
+                                       count = sum(hist.temp.use$annual.unsmoothed >= hist.temp.use$max.anomaly, na.rm = T),
                                        N = length(!is.na(hist.temp.use$annual.unsmoothed))))
   
   
@@ -187,11 +172,10 @@ for(i in 1:length(models)){ # start i loop (models)
   
   # record how many model years are more extreme
   extreme.outcomes <- rbind(extreme.outcomes,
-                            data.frame(extreme.level = extreme.sd[x],
-                                       model = models[i],
+                            data.frame(model = models[i],
                                        region = regions[j],
                                        period = "1.5_to_2.0",
-                                       count = sum(hist.temp.use$annual.unsmoothed >= extreme.sd[x], na.rm = T),
+                                       count = sum(hist.temp.use$annual.unsmoothed >= hist.temp.use$max.anomaly, na.rm = T),
                                        N = length(!is.na(hist.temp.use$annual.unsmoothed))))
   
 
@@ -199,11 +183,10 @@ for(i in 1:length(models)){ # start i loop (models)
 
 } # close i loop (models)
 
-} # close x loop (extreme levels)
 
 # check
 check <- extreme.outcomes %>%
-  group_by(extreme.level, region, period) %>%
+  group_by(region, period) %>%
   summarise(count = sum(count),
             N = sum(N)) %>%
   mutate(prop = count/N)
