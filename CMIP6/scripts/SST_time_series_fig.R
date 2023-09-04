@@ -148,7 +148,7 @@ anomaly_plot$region <- reorder(anomaly_plot$region, anomaly_plot$plot_order)
 
 
 g2 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)) +
-  geom_line() +
+  geom_line(size = 0.25) +
   geom_ribbon(aes(ymin = weighted_mean - 2*weighted_sd,
                   ymax = weighted_mean + 2*weighted_sd),
               alpha = 0.15, color = NA) +
@@ -164,4 +164,4 @@ g2 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)
 g2
 
 
-ggsave("./CMIP6/figs/SST_time_series.png", width = 9, height = 5)
+ggsave("./CMIP6/figs/SST_time_series.png", width = 8, height = 4.5)
