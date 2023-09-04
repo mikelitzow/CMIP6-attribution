@@ -284,11 +284,6 @@ g2 <- ggplot(dat_ce) +
   geom_text(data=data, aes(annual_far_3, log_catch_stnd, label = year), size=2.5) +
   geom_hline(yintercept = 0, lty = 2) 
   
-
-
-+
-  geom_rug(aes(x=rug.anom, y=NULL)) 
-
 print(g2)
 
 ## fit third model with categorical FAR -----------------------------
