@@ -16,4 +16,4 @@ models2 <- data.frame(Model = models.245,
 
 model.table <- left_join(models1, models2)
 
-write.csv(model.table, "appendix_model_table.csv", row.names = F)
+write.csv(model.table, "./CMIP6/summaries/appendix_model_table.csv", row.names = F)
