@@ -392,6 +392,13 @@ categorical.plot <- ggplot(posteriors, aes(Catch, fill = FAR)) +
 
 categorical.plot
 
+# and summarize
+posterior_mean <- posteriors %>%
+  group_by(FAR) %>%
+  summarize(mean_catch = mean(Catch))
+
+posterior_mean
+
 
 ## expected return time ----------------------------------------
 
