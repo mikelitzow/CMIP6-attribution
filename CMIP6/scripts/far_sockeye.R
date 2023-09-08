@@ -17,6 +17,13 @@ theme_set(theme_bw())
 ## Read in far,sst, and catch data --------------------------------------------
 data <- read.csv("./CMIP6/data/GOA_sockeye_catch_sst_far_no_s.peninsula.csv")
 
+# figure out 1.4SD change from mean in log space for paper
+mean = mean(data$log_catch)
+sd = sd(data$log_catch)
+
+change = mean - 1.4*sd
+(exp(mean)  - exp(change)) / exp(mean)
+
 
 ## Analyze sst-catch relationship ---------------------------------------------
 
