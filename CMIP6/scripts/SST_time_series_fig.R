@@ -154,14 +154,32 @@ g2 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)
               alpha = 0.15, color = NA) +
   facet_wrap(~region, scales = "free_y") +
   scale_color_manual(values = c(cb[c(2,1,7)], "black")) +
-  scale_fill_manual(values = c(cb[c(2,1,7)], NA)) +
+  scale_fill_manual(values = c(cb[c(2,1,7)], "white")) +
+  theme(legend.title = element_blank(),
+        legend.position = "top",
+        axis.title.x = element_blank()) +
+  labs(y = "SST anomaly (°C)")
+
+g2
+
+
+ggsave("./CMIP6/figs/SST_time_series.png", width = 8, height = 4.5)
+
+# add a version with uniform y-axis scale
+g3 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)) +
+  geom_line(size = 0.25) +
+  geom_ribbon(aes(ymin = weighted_mean - 2*weighted_sd,
+                  ymax = weighted_mean + 2*weighted_sd),
+              alpha = 0.15, color = NA) +
+  facet_wrap(~region) +
+  scale_color_manual(values = c(cb[c(2,1,7)], "black")) +
+  scale_fill_manual(values = c(cb[c(2,1,7)], "white")) +
   theme(legend.title = element_blank(),
         legend.position = "top",
         axis.title.x = element_blank()) +
   labs(y = "SST anomaly (°C)")
 
 
-g2
+g3
 
-
-ggsave("./CMIP6/figs/SST_time_series.png", width = 8, height = 4.5)
+ggsave("./CMIP6/figs/SST_time_series_uniform_y-axis.png", width = 8, height = 4.5)
