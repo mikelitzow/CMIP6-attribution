@@ -176,6 +176,11 @@ far_brms2 <- brm(form,
 
 saveRDS(far_brms2, paste("./CMIP6/brms_output/", regions[i], "annual_sst_rolling_window_binomial2.rds", sep = ""))
 ##
+plot_pred <- data.frame()
+
+for(i in 1:length(regions)){
+
+    far_brms2 <- readRDS(paste("./CMIP6/brms_output/", regions[i], "annual_sst_rolling_window_binomial2.rds", sep = ""))
 
 ce <- conditional_effects(far_brms2)
 plot(ce, ask = FALSE)
@@ -189,7 +194,7 @@ tail(ce2[[1]])
 
 ## setup new data
 x <- ce2[[1]]
-nd <- x[ , c("period", "annual.anomaly.1yr", "N", "model_fac")]
+nd <- x[ , c("period", "annual.anomaly.1yr", "N", "model_fac", "ersst.year")]
 nd$N <- 1000
 nd_pre <- nd[nd$period == "preindustrial", ]
 nd_his <- nd[nd$period == "historical", ]
@@ -222,16 +227,23 @@ his_pred <- data.frame(period = "historical",
                        prob = apply(his_prob, 2, mean),
                        lower = apply(his_prob, 2, quantile, probs = 0.025),
                        upper = apply(his_prob, 2, quantile, probs = 0.975))
-pred <- rbind(pre_pred, his_pred)
+pred <- rbind(pre_pred, his_pred) %>%
+    mutate(region = regions[i])
 
-g <- ggplot(pred) +
-    geom_line(aes(x = annual.anomaly.1yr, y = prob, color = period), size = 0.8) +
+plot_pred <- rbind(plot_pred, pred)
+}
+
+g <- ggplot(plot_pred) +
+    geom_line(aes(x = annual.anomaly.1yr, y = prob, color = period), size = 0.2) +
     geom_ribbon(aes(x = annual.anomaly.1yr, ymin = lower, ymax = upper, fill = period), alpha = 0.15) +
     scale_color_manual(values = c("tomato", "steelblue")) +
-    scale_fill_manual(values = c("tomato", "steelblue"))
+    scale_fill_manual(values = c("tomato", "steelblue")) +
+    facet_wrap(~region, scales = "free_x") +
+    labs(x = "SST (normalized anomaly)", y = "Probability") +
+    theme(legend.position = "top")
 print(g)
 
-
+ggsave("./CMIP6/figs/preindustrial_historical_probabilities.png", width = 6, height = 4.5, units = 'in')
 
 ## Calc FAR
 far <- 1 - (pre_prob / his_prob)
