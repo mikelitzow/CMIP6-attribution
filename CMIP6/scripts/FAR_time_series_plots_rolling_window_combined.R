@@ -176,27 +176,7 @@ far_pred_annual$window = "annual"
   
 ggsave("./CMIP6/figs/FAR_rolling_window_time_series_annual_3yr.png", height = 4.5, width = 8, units = 'in')  
 
-## save version with label for paper
-g <- ggplot(far_pred) +
-  geom_hline(yintercept = 0, color = "grey50", linetype = 2) +
-  geom_line(aes(x = year, y = prob, color = window_plot), size = 0.25) +
-  geom_ribbon(aes(x = year, ymin = lower, ymax = upper, fill = window_plot), alpha = 0.15) +
-  facet_wrap(~region_plot, ncol = 2) +
-  ylab("Fraction of Attributable Risk") +
-  theme(axis.title.x = element_blank(),
-        legend.title = element_blank(),
-        legend.position = "top") +
-  scale_color_manual(values = cb[c(2,6)]) +
-  scale_fill_manual(values = cb[c(2,6)]) +
-  labs(tag = "B") +
-  theme(plot.tag.position = c(0.03, 0.95),
-        plot.tag = element_text(size = 16)) +
-  scale_y_continuous(breaks = seq(-0.25, 1, 0.25)) +
-  coord_cartesian(ylim = c(-0.3, 1))
 
-print(g)
-
-ggsave("./CMIP6/figs/FAR_rolling_window_time_series_annual_3yrlabelled.png", height = 6, width = 6, units = 'in')  
 
 ###
 # calculate RR 
