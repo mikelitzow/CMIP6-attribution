@@ -182,4 +182,4 @@ g3 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)
 
 g3
 
-ggsave("./CMIP6/figs/SST_time_series_uniform_y-axis.png", width = 8, height = 4.5)
+ggsave("./CMIP6/figs/SST_time_series_uniform_y-axis.png", width = 7.3, height = 4.5)
