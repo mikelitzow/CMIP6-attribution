@@ -234,6 +234,34 @@ print(g)
 
 ggsave("./CMIP6/figs/Risk_Ratio_annual_3yr.png", height = 4.5, width = 8, units = 'in') 
 
+# version with uniform scale for y-axes
+
+g <- ggplot(far_pred) +
+  geom_line(aes(x = year, y = RR, color = window_plot), size = 0.25) +
+  geom_ribbon(aes(x = year, ymin = lower_RR, ymax = upper_RR, fill = window_plot), alpha = 0.15) +
+  facet_wrap(~region_plot) +
+  ylab("Risk Ratio") +
+  theme(axis.title.x = element_blank(),
+        legend.title = element_blank(),
+        legend.position = "top") +
+  scale_color_manual(values = cb[c(2,6)]) +
+  scale_fill_manual(values = cb[c(2,6)]) +
+  coord_trans(y = "pseudo_log") +
+  scale_y_continuous(breaks=c(1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000),
+                     minor_breaks = NULL,
+                     labels = c(expression(10^0),
+                                expression(10^1),
+                                expression(10^2),
+                                expression(10^3),
+                                expression(10^4),
+                                expression(10^5),
+                                expression(10^6),
+                                expression(10^7),
+                                expression(10^8))) 
+
+print(g)
+
+ggsave("./CMIP6/figs/Risk_Ratio_annual_3yr_uniform_y-axis_scales.png", height = 4.5, width = 7.3, units = 'in') 
 
 # and save output
 write.csv(far_pred, "./CMIP6/summaries/complete_FAR_RR_time_series_with_uncertainty.csv", row.names = F)
