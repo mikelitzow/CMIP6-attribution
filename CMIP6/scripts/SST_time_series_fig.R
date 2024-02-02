@@ -163,7 +163,35 @@ g2 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)
 g2
 
 
+
 ggsave("./CMIP6/figs/SST_time_series.png", width = 8, height = 4.5)
+
+# make a version with EBS data  and ssp245 only
+
+ebs_plot <- anomaly_plot %>%
+  filter(region == "Eastern Bering Sea",
+         group != "CMIP6 SSP585") 
+
+change <- ebs_plot$group == "ERSST"
+ebs_plot$group[change] <- "ERSST observations"
+
+g2_ebs <- ggplot(ebs_plot, aes(year, weighted_mean, color = group, fill = group)) +
+  geom_line(size = 0.25) +
+  geom_ribbon(aes(ymin = weighted_mean - 2*weighted_sd,
+                  ymax = weighted_mean + 2*weighted_sd),
+              alpha = 0.15, color = NA) +
+  scale_color_manual(values = c(cb[c(2,7)], "black")) +
+  scale_fill_manual(values = c(cb[c(2,7)], "white")) +
+  scale_y_continuous(breaks = seq(-2,7,1)) +
+  scale_x_continuous(breaks = seq(1850, 2100, 25), minor_breaks = NULL) +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.2, 0.7),
+        axis.title.x = element_blank()) +
+  labs(y = "SST anomaly (°C; 1850-1949 climatology)")
+
+g2_ebs
+
+ggsave("./CMIP6/figs/EBS_SST_time_series.png", width = 6, height = 4)
 
 # add a version with uniform y-axis scale
 g3 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)) +
