@@ -193,6 +193,71 @@ g2_ebs
 
 ggsave("./CMIP6/figs/EBS_SST_time_series.png", width = 6, height = 4)
 
+
+# make a version with GOA data  and ssp245 projections only
+
+goa_plot <- anomaly_plot %>%
+  filter(region == "Gulf of Alaska",
+         !group %in% c("CMIP6 SSP585", "CMIP6 Historical")) 
+
+change <- goa_plot$group == "ERSST"
+goa_plot$group[change] <- "Observations"
+
+change <- goa_plot$group == "CMIP6 SSP245"
+goa_plot$group[change] <- "Model projections (with mitigation)"
+
+g2_goa <- ggplot(goa_plot, aes(year, weighted_mean, color = group, fill = group)) +
+  geom_line(size = 0.25) +
+  geom_ribbon(aes(ymin = weighted_mean - 2*weighted_sd,
+                  ymax = weighted_mean + 2*weighted_sd),
+              alpha = 0.15, color = NA) +
+  scale_color_manual(values = c(cb[2], "black")) +
+  scale_fill_manual(values = c(cb[2], "white")) +
+  scale_x_continuous(breaks = seq(1850, 2100, 25), minor_breaks = NULL, limits = c(1850,2100)) +
+  scale_y_continuous(breaks = c(0, 2, 4, 6), limits = c(-1.6, 6)) +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.3, 0.7),
+        axis.title.x = element_blank()) +
+  labs(y = "SST anomaly (°C; 1850-1949 climatology)") +
+  geom_hline(yintercept = 0, lty = 2)
+
+g2_goa
+
+ggsave("./CMIP6/figs/GOA_SST_time_series.png", width = 6, height = 4)
+
+
+# and a version with GOA observations only
+
+goa_plot <- anomaly_plot %>%
+  filter(region == "Gulf of Alaska",
+         group == "ERSST") 
+
+change <- goa_plot$group == "ERSST"
+goa_plot$group[change] <- "Observations"
+
+
+g3_goa <- ggplot(goa_plot, aes(year, weighted_mean, color = group, fill = group)) +
+  geom_line(size = 0.25) +
+  geom_ribbon(aes(ymin = weighted_mean - 2*weighted_sd,
+                  ymax = weighted_mean + 2*weighted_sd),
+              alpha = 0.15, color = NA) +
+  scale_color_manual(values = c("black")) +
+  scale_fill_manual(values = c("white")) +
+  scale_x_continuous(breaks = seq(1850, 2100, 25), minor_breaks = NULL, limits = c(1850,2100)) +
+  scale_y_continuous(breaks = c(0, 2, 4, 6), limits = c(-1.6, 6)) +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.3, 0.7),
+        axis.title.x = element_blank()) +
+  labs(y = "SST anomaly (°C; 1850-1949 climatology)") +
+  geom_hline(yintercept = 0, lty = 2) 
+
+g3_goa
+
+ggsave("./CMIP6/figs/GOA_SST_observation_time_series.png", width = 6, height = 4)
+
+
+
+
 # add a version with uniform y-axis scale
 g3 <- ggplot(anomaly_plot, aes(year, weighted_mean, color = group, fill = group)) +
   geom_line(size = 0.25) +
