@@ -30,3 +30,24 @@ dat <- dat %>%
 tail(dat)
 
 dat[dat$year %in% c(2016, 2018, 2019),]
+
+## now combined EBS / GOA plots for KAMSS
+
+dat <- read.csv("./CMIP6/summaries/regional_north_pacific_ersst_time_series.csv")
+
+head(dat)
+
+dat <- dat %>%
+  filter(region %in% c("Eastern_Bering_Sea", "Gulf_of_Alaska"))
+
+ggplot(dat, aes(year, annual.unsmoothed)) +
+  geom_point() +
+  geom_line() +
+  theme(axis.title.x = element_blank()) +
+  geom_hline(yintercept = mean(dat$annual.unsmoothed), lty = 2) +
+  labs(title = "Annual mean sea surface temperature, 1854-2021",
+       subtitle = "Source: NOAA Extended Reconstructed SST v5",
+       y = "°C") +
+  scale_x_continuous(breaks = seq(1850, 2020, 10), minor_breaks = NULL)
+
+ggsave("./CMIP6/figs/EBS_SST_plot.png", width = 7, height = 4, units = 'in')
